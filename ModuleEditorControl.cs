@@ -27,6 +27,7 @@ public sealed class ModuleEditorControl : UserControl
     private readonly List<ModuleCountField> _counts = new();
     // 程序化恢复列宽时置真, 避免 ColumnWidthChanged 把默认值回写覆盖用户保存的宽度。
     private bool _suppressColumnSave;
+    private bool _suppressUnitsColumnResize;
     private static readonly PartyTypeOption[] PartyTypeOptions =
     [
         new("任意 (*)", null),
@@ -35,8 +36,14 @@ public sealed class ModuleEditorControl : UserControl
         new("队伍 (46)", "46")
     ];
     private static readonly MatchOption[] ClassOptions = BuildClassOptions();
-    // 这三列固定宽度并缓存; "条件"列为 Fill, 不缓存。
+    // 这三列固定宽度并缓存; "条件"列为 Fill, 图标列固定且不缓存。
     private static readonly string[] FixedWidthColumns = ["Enabled", "Spell", "Unit"];
+    private static readonly HashSet<string> NonAuraGroupFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "生命值",
+        "职责",
+        "驱散"
+    };
 
     public ModuleEditorControl(ModuleStore moduleStore, Action runtimeRestartRequested, string baseDirectory)
     {
@@ -130,16 +137,41 @@ public sealed class ModuleEditorControl : UserControl
         };
         editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 74));
         editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 74));
-        editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 152));
+        editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
         editor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
         editor.Controls.Add(BuildNameRow(), 0, 0);
         editor.Controls.Add(BuildMatchRow(), 0, 1);
         editor.Controls.Add(BuildUnitsPanel(), 0, 2);
-        editor.Controls.Add(BuildRulesGrid(), 0, 3);
+        editor.Controls.Add(BuildRulesPanel(), 0, 3);
         editor.Controls.Add(BuildActionRow(), 0, 4);
         return editor;
+    }
+
+    private Control BuildRulesPanel()
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = UiTheme.Surface,
+            ColumnCount = 1,
+            RowCount = 2,
+            Margin = new Padding(0, 2, 0, 0)
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        panel.Controls.Add(new Label
+        {
+            Text = "逻辑编辑器",
+            Dock = DockStyle.Fill,
+            ForeColor = UiTheme.Muted,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true
+        }, 0, 0);
+        panel.Controls.Add(BuildRulesGrid(), 0, 1);
+        return panel;
     }
 
     private Control BuildUnitsPanel()
@@ -159,7 +191,7 @@ public sealed class ModuleEditorControl : UserControl
 
         var title = new Label
         {
-            Text = "动态单位 / 数量字段（可在“目标”和“条件”中引用）",
+            Text = "动态单位 / 单位数量",
             Dock = DockStyle.Fill,
             ForeColor = UiTheme.Muted,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -168,7 +200,7 @@ public sealed class ModuleEditorControl : UserControl
         panel.Controls.Add(title, 0, 0);
         panel.SetColumnSpan(title, 2);
 
-        foreach (var column in new[] { ("名称", 130), ("类型", 50), ("摘要", 240) })
+        foreach (var column in new[] { ("名称", 210), ("类型", 50), ("摘要", 160) })
         {
             _unitsList.Columns.Add(column.Item1, column.Item2);
         }
@@ -184,6 +216,15 @@ public sealed class ModuleEditorControl : UserControl
         _unitsList.ForeColor = UiTheme.Text;
         _unitsList.BorderStyle = BorderStyle.None;
         _unitsList.DoubleClick += (_, _) => EditSelectedUnit();
+        _unitsList.Resize += (_, _) => StretchUnitsSummaryColumn();
+        _unitsList.HandleCreated += (_, _) => StretchUnitsSummaryColumn();
+        _unitsList.ColumnWidthChanged += (_, _) =>
+        {
+            if (!_suppressUnitsColumnResize)
+            {
+                StretchUnitsSummaryColumn();
+            }
+        };
         panel.Controls.Add(_unitsList, 0, 1);
 
         var buttons = new FlowLayoutPanel
@@ -338,17 +379,11 @@ public sealed class ModuleEditorControl : UserControl
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
             ReadOnly = true
         });
-        _rulesGrid.Columns.Add(new DataGridViewButtonColumn
-        {
-            Name = "Delete",
-            HeaderText = string.Empty,
-            Text = "删除",
-            UseColumnTextForButtonValue = true,
-            Width = 56,
-            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-            FlatStyle = FlatStyle.Flat
-        });
+        AddRuleIconColumn("MoveUp", "▲", "上移");
+        AddRuleIconColumn("MoveDown", "▼", "下移");
+        AddRuleIconColumn("Delete", "×", "删除", UiTheme.Danger);
         _rulesGrid.CellClick += OnRulesGridCellClick;
+        _rulesGrid.CellPainting += OnRulesGridCellPainting;
         _rulesGrid.DataError += (_, e) => e.ThrowException = false;
         _rulesGrid.ColumnWidthChanged += OnColumnWidthChanged;
         _rulesGrid.CellValueChanged += OnRulesGridCellValueChanged;
@@ -364,6 +399,27 @@ public sealed class ModuleEditorControl : UserControl
         ApplyColumnWidths(UiCacheStore.Load().ModuleRulesGridColumns);
 
         return _rulesGrid;
+    }
+
+    private void AddRuleIconColumn(string name, string icon, string tooltip, Color? foreColor = null)
+    {
+        var column = new DataGridViewButtonColumn
+        {
+            Name = name,
+            HeaderText = string.Empty,
+            Text = icon,
+            ToolTipText = tooltip,
+            UseColumnTextForButtonValue = true,
+            Width = 32,
+            MinimumWidth = 32,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            Resizable = DataGridViewTriState.False,
+            FlatStyle = FlatStyle.Flat
+        };
+        column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+        column.DefaultCellStyle.ForeColor = foreColor ?? UiTheme.Muted;
+        column.DefaultCellStyle.SelectionForeColor = foreColor ?? UiTheme.Text;
+        _rulesGrid.Columns.Add(column);
     }
 
     /// <summary>
@@ -629,6 +685,7 @@ public sealed class ModuleEditorControl : UserControl
         return _fieldCatalog
             .GetGroupFields(ReadMatchCombo(_classBox), ReadMatchCombo(_specBox))
             .Select(field => field.Name)
+            .Where(name => !NonAuraGroupFields.Contains(name))
             .ToList();
     }
 
@@ -714,6 +771,8 @@ public sealed class ModuleEditorControl : UserControl
         Count
     }
 
+    private sealed record RuleRowValues(bool Enabled, string Spell, string UnitText, string Condition);
+
     private void ApplyColumnWidths(Dictionary<string, int>? widths)
     {
         if (widths is null || widths.Count == 0)
@@ -770,6 +829,18 @@ public sealed class ModuleEditorControl : UserControl
         }
 
         var columnName = _rulesGrid.Columns[e.ColumnIndex].Name;
+        if (columnName == "MoveUp")
+        {
+            MoveRule(e.RowIndex, -1);
+            return;
+        }
+
+        if (columnName == "MoveDown")
+        {
+            MoveRule(e.RowIndex, 1);
+            return;
+        }
+
         if (columnName == "Delete")
         {
             DeleteRule(e.RowIndex);
@@ -782,14 +853,127 @@ public sealed class ModuleEditorControl : UserControl
         }
     }
 
+    private void OnRulesGridCellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex < 0)
+        {
+            return;
+        }
+
+        var columnName = _rulesGrid.Columns[e.ColumnIndex].Name;
+        if (columnName is not ("MoveUp" or "MoveDown" or "Delete"))
+        {
+            return;
+        }
+
+        e.Paint(e.CellBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.Border);
+
+        var icon = columnName switch
+        {
+            "MoveUp" => "▲",
+            "MoveDown" => "▼",
+            _ => "×"
+        };
+        var enabled = IsRuleIconEnabled(columnName, e.RowIndex);
+        var color = columnName == "Delete" ? UiTheme.Danger : UiTheme.Muted;
+        if (!enabled)
+        {
+            color = Color.FromArgb(70, color);
+        }
+
+        if (e.Graphics is null)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            icon,
+            _rulesGrid.Font,
+            e.CellBounds,
+            color,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        e.Handled = true;
+    }
+
+    private bool IsRuleIconEnabled(string columnName, int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _rulesGrid.Rows.Count || _rulesGrid.Rows[rowIndex].IsNewRow)
+        {
+            return false;
+        }
+
+        return columnName switch
+        {
+            "MoveUp" => rowIndex > 0,
+            "MoveDown" => rowIndex < LastRuleRowIndex(),
+            "Delete" => true,
+            _ => false
+        };
+    }
+
     private void DeleteRule(int rowIndex)
     {
+        _rulesGrid.EndEdit();
         var row = _rulesGrid.Rows[rowIndex];
         // 新行占位符无需删除。
         if (!row.IsNewRow)
         {
             _rulesGrid.Rows.RemoveAt(rowIndex);
         }
+    }
+
+    private void MoveRule(int rowIndex, int direction)
+    {
+        _rulesGrid.EndEdit();
+        if (rowIndex < 0 || rowIndex > LastRuleRowIndex() || _rulesGrid.Rows[rowIndex].IsNewRow)
+        {
+            return;
+        }
+
+        var targetIndex = rowIndex + direction;
+        if (targetIndex < 0 || targetIndex > LastRuleRowIndex())
+        {
+            return;
+        }
+
+        var current = ReadRuleRow(_rulesGrid.Rows[rowIndex]);
+        var target = ReadRuleRow(_rulesGrid.Rows[targetIndex]);
+        WriteRuleRow(_rulesGrid.Rows[rowIndex], target);
+        WriteRuleRow(_rulesGrid.Rows[targetIndex], current);
+        _rulesGrid.CurrentCell = _rulesGrid.Rows[targetIndex].Cells["Condition"];
+        _rulesGrid.Rows[targetIndex].Selected = true;
+        _rulesGrid.Invalidate();
+    }
+
+    private int LastRuleRowIndex()
+    {
+        var last = _rulesGrid.Rows.Count - 1;
+        if (_rulesGrid.AllowUserToAddRows)
+        {
+            last--;
+        }
+
+        return last;
+    }
+
+    private RuleRowValues ReadRuleRow(DataGridViewRow row)
+    {
+        return new RuleRowValues(
+            CellBool(row, "Enabled", defaultValue: true),
+            CellText(row, "Spell"),
+            CellText(row, "Unit"),
+            CellText(row, "Condition"));
+    }
+
+    private void WriteRuleRow(DataGridViewRow row, RuleRowValues values)
+    {
+        row.Cells["Enabled"].Value = values.Enabled;
+        EnsureComboItem(_spellColumn, values.Spell);
+        row.Cells["Spell"].Value = values.Spell;
+        row.Cells["Condition"].Value = values.Condition;
+        RebuildUnitCell(row, values.UnitText);
     }
 
     private void OpenConditionEditor(int rowIndex)
@@ -818,13 +1002,12 @@ public sealed class ModuleEditorControl : UserControl
         row.Cells["Condition"].Value = editor.ConditionText;
     }
 
-    // 条件字段 = 状态/技能字段 + 每个动态单位的 名字.字段 与裸名(存在) + 每个数量名。
+    // 条件字段 = 状态/技能字段 + 每个动态单位的裸名(存在)和值名称 + 每个数量名。
     private IReadOnlyList<ConditionField> BuildConditionFields()
     {
         var classId = ReadMatchCombo(_classBox);
         var specId = ReadMatchCombo(_specBox);
         var fields = new List<ConditionField>(_fieldCatalog.GetFields(classId, specId));
-        var groupFields = _fieldCatalog.GetGroupFields(classId, specId);
 
         foreach (var unit in _units)
         {
@@ -833,21 +1016,13 @@ public sealed class ModuleEditorControl : UserControl
                 continue;
             }
 
-            foreach (var groupField in groupFields)
-            {
-                fields.Add(new ConditionField(
-                    $"{unit.Name}.{groupField.Name}",
-                    $"{unit.Name}: {groupField.DisplayName}",
-                    groupField.Type));
-            }
-
             // 裸单位名作为存在性布尔。
-            fields.Add(new ConditionField(unit.Name, $"{unit.Name} (存在)", ConditionFieldType.Bool));
+            fields.Add(new ConditionField(unit.Name, $"{unit.Name} (存在)", ConditionFieldType.Bool, ConditionFieldCategory.DynamicUnit));
 
-            // 名称2: 该单位 生命值 的直接命名数值字段。
+            // 值名称: 该单位 生命值 的直接命名数值字段。
             if (!string.IsNullOrWhiteSpace(unit.HealthName))
             {
-                fields.Add(new ConditionField(unit.HealthName, $"{unit.HealthName} (生命值)", ConditionFieldType.Int));
+                fields.Add(new ConditionField(unit.HealthName, $"{unit.HealthName} (生命值)", ConditionFieldType.Int, ConditionFieldCategory.DynamicUnit));
             }
         }
 
@@ -855,7 +1030,7 @@ public sealed class ModuleEditorControl : UserControl
         {
             if (!string.IsNullOrWhiteSpace(count.Name))
             {
-                fields.Add(new ConditionField(count.Name, $"人数: {count.Name}", ConditionFieldType.Int));
+                fields.Add(new ConditionField(count.Name, $"人数: {count.Name}", ConditionFieldType.Int, ConditionFieldCategory.DynamicUnit));
             }
         }
 
@@ -1180,6 +1355,27 @@ public sealed class ModuleEditorControl : UserControl
             {
                 button.Width = width;
             }
+        }
+    }
+
+    private void StretchUnitsSummaryColumn()
+    {
+        if (_unitsList.Columns.Count < 3 || _suppressUnitsColumnResize)
+        {
+            return;
+        }
+
+        _suppressUnitsColumnResize = true;
+        try
+        {
+            var summaryWidth = _unitsList.ClientSize.Width
+                - _unitsList.Columns[0].Width
+                - _unitsList.Columns[1].Width;
+            _unitsList.Columns[2].Width = Math.Max(120, summaryWidth);
+        }
+        finally
+        {
+            _suppressUnitsColumnResize = false;
         }
     }
 

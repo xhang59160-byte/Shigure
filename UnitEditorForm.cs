@@ -19,13 +19,26 @@ public sealed class UnitEditorForm : Form
         new("输出 (3)", 3)
     ];
 
+    private static readonly DispelTypeOption[] DispelTypeOptions =
+    [
+        new("1: 魔法", 1),
+        new("2: 疾病", 2),
+        new("3: 诅咒", 3),
+        new("4: 中毒", 4)
+    ];
+
+    private static readonly LowestHealthAuraFilterItem[] LowestHealthAuraFilterOptions =
+    [
+        new("不筛选光环", LowestHealthAuraFilterKind.None),
+        new("带任一光环", LowestHealthAuraFilterKind.WithAnyAura),
+        new("不带某光环", LowestHealthAuraFilterKind.WithoutAura),
+        new("带某光环", LowestHealthAuraFilterKind.WithAura),
+        new("某光环值等于", LowestHealthAuraFilterKind.WithAuraCount)
+    ];
+
     private static readonly SelectorItem[] UnitSelectors =
     [
         new("生命值最低", UnitSelectorKind.LowestHealth),
-        new("带任一光环且血最低", UnitSelectorKind.LowestHealthWithAnyAura),
-        new("不带某光环且血最低", UnitSelectorKind.LowestHealthWithoutAura),
-        new("带某光环且血最低", UnitSelectorKind.LowestHealthWithAura),
-        new("光环层数等于某值且血最低", UnitSelectorKind.LowestHealthWithAuraCount),
         new("按职责", UnitSelectorKind.UnitWithRole),
         new("按职责且不带某光环", UnitSelectorKind.UnitWithRoleWithoutAura),
         new("带某光环(持续最久)", UnitSelectorKind.UnitWithAura),
@@ -42,10 +55,12 @@ public sealed class UnitEditorForm : Form
     private readonly IReadOnlyList<string> _auraFields;
     private readonly HashSet<string> _takenNames;
 
+    private readonly Label _healthNameLabel = new();
     private readonly TextBox _nameBox = new();
     private readonly TextBox _healthNameBox = new();
     private readonly ComboBox _categoryBox = new();
     private readonly ComboBox _selectorBox = new();
+    private readonly ComboBox _lowestHealthAuraFilterBox = new();
     private readonly FlowLayoutPanel _paramPanel = new();
 
     private readonly NumericUpDown _thresholdBox = new();
@@ -54,9 +69,10 @@ public sealed class UnitEditorForm : Form
     private readonly ComboBox _auraBox = new();
     private readonly CheckedListBox _aurasBox = new();
     private readonly NumericUpDown _auraCountBox = new();
-    private readonly NumericUpDown _dispelTypeBox = new();
+    private readonly ComboBox _dispelTypeBox = new();
 
     private Panel _thresholdRow = null!;
+    private Panel _lowestHealthAuraFilterRow = null!;
     private Panel _roleRow = null!;
     private Panel _reverseRow = null!;
     private Panel _auraRow = null!;
@@ -127,10 +143,14 @@ public sealed class UnitEditorForm : Form
 
         UiTheme.StyleComboBox(_selectorBox);
         _selectorBox.DropDownWidth = 360;
-        _selectorBox.SelectedIndexChanged += (_, _) => UpdateParamVisibility();
+        _selectorBox.SelectedIndexChanged += (_, _) =>
+        {
+            UpdateParamVisibility();
+            UpdateHealthNameState();
+        };
 
-        root.Controls.Add(BuildSplitRow("名称", StyleTextBox(_nameBox), "名称2 (生命值)", StyleTextBox(_healthNameBox)), 0, 0);
-        root.Controls.Add(BuildSplitRow("类别", _categoryBox, "选择器", _selectorBox), 0, 1);
+        root.Controls.Add(BuildSplitRow("类别", _categoryBox, "选择器", _selectorBox), 0, 0);
+        root.Controls.Add(BuildNameRow(), 0, 1);
 
         _paramPanel.Dock = DockStyle.Fill;
         _paramPanel.BackColor = UiTheme.Surface;
@@ -149,9 +169,15 @@ public sealed class UnitEditorForm : Form
     private void BuildParamRows()
     {
         _thresholdBox.Minimum = 1;
-        _thresholdBox.Maximum = 100;
+        _thresholdBox.Maximum = int.MaxValue;
         _thresholdBox.Value = 100;
         StyleNumeric(_thresholdBox);
+
+        UiTheme.StyleComboBox(_lowestHealthAuraFilterBox);
+        _lowestHealthAuraFilterBox.DropDownWidth = 220;
+        _lowestHealthAuraFilterBox.Items.AddRange(LowestHealthAuraFilterOptions.Cast<object>().ToArray());
+        _lowestHealthAuraFilterBox.SelectedIndex = 0;
+        _lowestHealthAuraFilterBox.SelectedIndexChanged += (_, _) => UpdateParamVisibility();
 
         UiTheme.StyleComboBox(_roleBox);
         _roleBox.DropDownWidth = 160;
@@ -192,20 +218,21 @@ public sealed class UnitEditorForm : Form
         _auraCountBox.Value = 1;
         StyleNumeric(_auraCountBox);
 
-        _dispelTypeBox.Minimum = 0;
-        _dispelTypeBox.Maximum = 100;
-        _dispelTypeBox.Value = 1;
-        StyleNumeric(_dispelTypeBox);
+        UiTheme.StyleComboBox(_dispelTypeBox);
+        _dispelTypeBox.DropDownWidth = 180;
+        _dispelTypeBox.Items.AddRange(DispelTypeOptions.Cast<object>().ToArray());
+        _dispelTypeBox.SelectedIndex = 0;
 
         _thresholdRow = BuildLabeledRow("血量阈值 (<)", _thresholdBox);
+        _lowestHealthAuraFilterRow = BuildLabeledRow("光环筛选", _lowestHealthAuraFilterBox);
         _roleRow = BuildLabeledRow("职责", _roleBox);
         _reverseRow = BuildLabeledRow(string.Empty, _reverseBox);
         _auraRow = BuildLabeledRow("光环", _auraBox);
         _aurasRow = BuildLabeledRow("光环 (可多选)", _aurasBox, 116);
-        _auraCountRow = BuildLabeledRow("光环层数 =", _auraCountBox);
+        _auraCountRow = BuildLabeledRow("光环值", _auraCountBox);
         _dispelRow = BuildLabeledRow("驱散类型", _dispelTypeBox);
 
-        _paramPanel.Controls.AddRange([_thresholdRow, _roleRow, _reverseRow, _auraRow, _aurasRow, _auraCountRow, _dispelRow]);
+        _paramPanel.Controls.AddRange([_thresholdRow, _lowestHealthAuraFilterRow, _roleRow, _reverseRow, _auraRow, _aurasRow, _auraCountRow, _dispelRow]);
     }
 
     private Control BuildActionRow()
@@ -255,11 +282,14 @@ public sealed class UnitEditorForm : Form
         }
     }
 
-    // 名称2 只对"单位"类别有意义(把该单位的 生命值 暴露成数值条件字段); 数量类别禁用。
+    // 值名称只对"生命值最低"单位有意义(把该单位的 生命值 暴露成数值条件字段)。
     private void UpdateHealthNameState()
     {
-        _healthNameBox.Enabled = !IsCountCategory;
-        if (IsCountCategory)
+        var visible = SupportsHealthName();
+        _healthNameLabel.Visible = visible;
+        _healthNameBox.Visible = visible;
+        _healthNameBox.Enabled = visible;
+        if (!visible)
         {
             _healthNameBox.Text = string.Empty;
         }
@@ -267,7 +297,7 @@ public sealed class UnitEditorForm : Form
 
     private void UpdateParamVisibility()
     {
-        bool threshold = false, role = false, reverse = false, auraSingle = false, auraMulti = false, auraCount = false, dispel = false;
+        bool threshold = false, lowestHealthAuraFilter = false, role = false, reverse = false, auraSingle = false, auraMulti = false, auraCount = false, dispel = false;
 
         if (IsCountCategory)
         {
@@ -289,7 +319,21 @@ public sealed class UnitEditorForm : Form
             switch ((_selectorBox.SelectedItem as SelectorItem)?.Kind)
             {
                 case UnitSelectorKind.LowestHealth:
-                    threshold = true;
+                    threshold = lowestHealthAuraFilter = true;
+                    switch (SelectedLowestHealthAuraFilter())
+                    {
+                        case LowestHealthAuraFilterKind.WithAnyAura:
+                            auraMulti = true;
+                            break;
+                        case LowestHealthAuraFilterKind.WithoutAura:
+                        case LowestHealthAuraFilterKind.WithAura:
+                            auraSingle = true;
+                            break;
+                        case LowestHealthAuraFilterKind.WithAuraCount:
+                            auraSingle = auraCount = true;
+                            break;
+                    }
+
                     break;
                 case UnitSelectorKind.LowestHealthWithAnyAura:
                     threshold = auraMulti = true;
@@ -317,6 +361,7 @@ public sealed class UnitEditorForm : Form
         }
 
         _thresholdRow.Visible = threshold;
+        _lowestHealthAuraFilterRow.Visible = lowestHealthAuraFilter;
         _roleRow.Visible = role;
         _reverseRow.Visible = reverse;
         _auraRow.Visible = auraSingle;
@@ -348,7 +393,8 @@ public sealed class UnitEditorForm : Form
             _healthNameBox.Text = unit.HealthName ?? string.Empty;
             _categoryBox.SelectedIndex = 0;
             PopulateSelectors();
-            SelectSelector(unit.Kind);
+            SelectSelector(DisplaySelectorKind(unit.Kind));
+            SelectLowestHealthAuraFilter(unit.Kind);
             if (unit.HealthThreshold is { } th)
             {
                 _thresholdBox.Value = Clamp(th, _thresholdBox);
@@ -369,7 +415,7 @@ public sealed class UnitEditorForm : Form
 
             if (unit.DispelType is { } dt)
             {
-                _dispelTypeBox.Value = Clamp(dt, _dispelTypeBox);
+                SelectDispelType(dt);
             }
         }
     }
@@ -412,12 +458,39 @@ public sealed class UnitEditorForm : Form
             return;
         }
 
-        var unitKind = (_selectorBox.SelectedItem as SelectorItem)?.Kind ?? UnitSelectorKind.LowestHealth;
-        var moduleUnit = new ModuleUnit { Name = name, Kind = unitKind };
-        switch (unitKind)
+        var selectorKind = (_selectorBox.SelectedItem as SelectorItem)?.Kind ?? UnitSelectorKind.LowestHealth;
+        var moduleUnit = new ModuleUnit { Name = name, Kind = selectorKind };
+        switch (selectorKind)
         {
             case UnitSelectorKind.LowestHealth:
                 moduleUnit.HealthThreshold = (int)_thresholdBox.Value;
+                switch (SelectedLowestHealthAuraFilter())
+                {
+                    case LowestHealthAuraFilterKind.WithAnyAura:
+                        moduleUnit.Kind = UnitSelectorKind.LowestHealthWithAnyAura;
+                        moduleUnit.AuraNames = CheckedAuras();
+                        if (moduleUnit.AuraNames.Count == 0)
+                        {
+                            MessageBox.Show("请至少勾选一个光环。", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        break;
+                    case LowestHealthAuraFilterKind.WithoutAura:
+                        moduleUnit.Kind = UnitSelectorKind.LowestHealthWithoutAura;
+                        moduleUnit.AuraNames = SingleAuraList();
+                        break;
+                    case LowestHealthAuraFilterKind.WithAura:
+                        moduleUnit.Kind = UnitSelectorKind.LowestHealthWithAura;
+                        moduleUnit.AuraNames = SingleAuraList();
+                        break;
+                    case LowestHealthAuraFilterKind.WithAuraCount:
+                        moduleUnit.Kind = UnitSelectorKind.LowestHealthWithAuraCount;
+                        moduleUnit.AuraNames = SingleAuraList();
+                        moduleUnit.AuraCount = (int)_auraCountBox.Value;
+                        break;
+                }
+
                 break;
             case UnitSelectorKind.LowestHealthWithAnyAura:
                 moduleUnit.HealthThreshold = (int)_thresholdBox.Value;
@@ -452,28 +525,28 @@ public sealed class UnitEditorForm : Form
                 moduleUnit.AuraNames = SingleAuraList();
                 break;
             case UnitSelectorKind.UnitWithDispelType:
-                moduleUnit.DispelType = (int)_dispelTypeBox.Value;
+                moduleUnit.DispelType = SelectedDispelType();
                 break;
         }
 
-        if (UnitRequiresAura(unitKind) && (moduleUnit.AuraNames is null || moduleUnit.AuraNames.Count == 0))
+        if (UnitRequiresAura(moduleUnit.Kind) && (moduleUnit.AuraNames is null || moduleUnit.AuraNames.Count == 0))
         {
             MessageBox.Show("请选择光环。", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        var healthName = _healthNameBox.Text.Trim();
+        var healthName = SupportsHealthName() ? _healthNameBox.Text.Trim() : string.Empty;
         if (healthName.Length > 0)
         {
             if (string.Equals(healthName, name, StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("名称2 不能与名称相同。", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("值名称不能与名称相同。", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!ValidateName(healthName, out var healthMessage))
             {
-                MessageBox.Show($"名称2: {healthMessage}", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"值名称: {healthMessage}", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
         }
@@ -515,17 +588,26 @@ public sealed class UnitEditorForm : Form
 
     private bool IsCountCategory => _categoryBox.SelectedIndex == 1;
 
+    private bool SupportsHealthName()
+        => !IsCountCategory
+            && (_selectorBox.SelectedItem as SelectorItem)?.Kind == UnitSelectorKind.LowestHealth;
+
     private static bool RequiresAura(CountKind kind)
         => kind is CountKind.UnitsWithoutAuraBelowHealth or CountKind.UnitsWithAura;
 
     private static bool UnitRequiresAura(UnitSelectorKind kind)
-        => kind is UnitSelectorKind.LowestHealthWithoutAura
+        => kind is UnitSelectorKind.LowestHealthWithAnyAura
+            or UnitSelectorKind.LowestHealthWithoutAura
             or UnitSelectorKind.LowestHealthWithAura
             or UnitSelectorKind.LowestHealthWithAuraCount
             or UnitSelectorKind.UnitWithRoleWithoutAura
             or UnitSelectorKind.UnitWithAura;
 
     private string? SelectedAura() => _auraBox.SelectedItem?.ToString();
+
+    private LowestHealthAuraFilterKind SelectedLowestHealthAuraFilter()
+        => (_lowestHealthAuraFilterBox.SelectedItem as LowestHealthAuraFilterItem)?.Kind
+            ?? LowestHealthAuraFilterKind.None;
 
     private List<string> SingleAuraList()
     {
@@ -548,6 +630,39 @@ public sealed class UnitEditorForm : Form
     }
 
     private int SelectedRole() => (_roleBox.SelectedItem as RoleOption)?.Value ?? 1;
+
+    private int SelectedDispelType() => (_dispelTypeBox.SelectedItem as DispelTypeOption)?.Value ?? 1;
+
+    private static UnitSelectorKind DisplaySelectorKind(UnitSelectorKind kind)
+        => kind is UnitSelectorKind.LowestHealthWithAnyAura
+            or UnitSelectorKind.LowestHealthWithoutAura
+            or UnitSelectorKind.LowestHealthWithAura
+            or UnitSelectorKind.LowestHealthWithAuraCount
+                ? UnitSelectorKind.LowestHealth
+                : kind;
+
+    private void SelectLowestHealthAuraFilter(UnitSelectorKind kind)
+    {
+        var filter = kind switch
+        {
+            UnitSelectorKind.LowestHealthWithAnyAura => LowestHealthAuraFilterKind.WithAnyAura,
+            UnitSelectorKind.LowestHealthWithoutAura => LowestHealthAuraFilterKind.WithoutAura,
+            UnitSelectorKind.LowestHealthWithAura => LowestHealthAuraFilterKind.WithAura,
+            UnitSelectorKind.LowestHealthWithAuraCount => LowestHealthAuraFilterKind.WithAuraCount,
+            _ => LowestHealthAuraFilterKind.None
+        };
+
+        for (var i = 0; i < _lowestHealthAuraFilterBox.Items.Count; i++)
+        {
+            if (_lowestHealthAuraFilterBox.Items[i] is LowestHealthAuraFilterItem item && item.Kind == filter)
+            {
+                _lowestHealthAuraFilterBox.SelectedIndex = i;
+                return;
+            }
+        }
+
+        _lowestHealthAuraFilterBox.SelectedIndex = 0;
+    }
 
     private void SelectSelector(UnitSelectorKind kind)
     {
@@ -583,6 +698,20 @@ public sealed class UnitEditorForm : Form
                 return;
             }
         }
+    }
+
+    private void SelectDispelType(int dispelType)
+    {
+        for (var i = 0; i < _dispelTypeBox.Items.Count; i++)
+        {
+            if (_dispelTypeBox.Items[i] is DispelTypeOption option && option.Value == dispelType)
+            {
+                _dispelTypeBox.SelectedIndex = i;
+                return;
+            }
+        }
+
+        _dispelTypeBox.SelectedIndex = 0;
     }
 
     private static void SelectAura(ComboBox box, string? aura)
@@ -672,6 +801,33 @@ public sealed class UnitEditorForm : Form
         return panel;
     }
 
+    private Control BuildNameRow()
+    {
+        var panel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = UiTheme.Surface,
+            Margin = new Padding(0)
+        };
+
+        var nameLabel = new Label { Text = "名称", ForeColor = UiTheme.Muted, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(0, 5, 72, 28), AutoEllipsis = true };
+        StyleTextBox(_nameBox);
+        _nameBox.Bounds = new Rectangle(80, 5, 230, 28);
+        _healthNameLabel.Text = "值名称";
+        _healthNameLabel.ForeColor = UiTheme.Muted;
+        _healthNameLabel.TextAlign = ContentAlignment.MiddleLeft;
+        _healthNameLabel.Bounds = new Rectangle(330, 5, 130, 28);
+        _healthNameLabel.AutoEllipsis = true;
+        StyleTextBox(_healthNameBox);
+        _healthNameBox.Bounds = new Rectangle(466, 5, RowWidth - 466, 28);
+
+        panel.Controls.Add(_nameBox);
+        panel.Controls.Add(nameLabel);
+        panel.Controls.Add(_healthNameBox);
+        panel.Controls.Add(_healthNameLabel);
+        return panel;
+    }
+
     private static TextBox StyleTextBox(TextBox box)
     {
         box.BackColor = UiTheme.Field;
@@ -692,6 +848,11 @@ public sealed class UnitEditorForm : Form
         public override string ToString() => Text;
     }
 
+    private sealed record LowestHealthAuraFilterItem(string Text, LowestHealthAuraFilterKind Kind)
+    {
+        public override string ToString() => Text;
+    }
+
     private sealed record CountItem(string Text, CountKind Kind)
     {
         public override string ToString() => Text;
@@ -700,5 +861,19 @@ public sealed class UnitEditorForm : Form
     private sealed record RoleOption(string Text, int Value)
     {
         public override string ToString() => Text;
+    }
+
+    private sealed record DispelTypeOption(string Text, int Value)
+    {
+        public override string ToString() => Text;
+    }
+
+    private enum LowestHealthAuraFilterKind
+    {
+        None,
+        WithAnyAura,
+        WithoutAura,
+        WithAura,
+        WithAuraCount
     }
 }

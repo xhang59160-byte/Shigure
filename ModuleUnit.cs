@@ -17,7 +17,7 @@ public enum UnitSelectorKind
     /// <summary>带某光环且生命值最低。get_lowest_health_unit_with_aura</summary>
     LowestHealthWithAura,
 
-    /// <summary>某光环层数等于指定值且生命值最低。get_lowest_health_unit_with_aura_count</summary>
+    /// <summary>某光环值等于指定值且生命值最低。get_lowest_health_unit_with_aura_count</summary>
     LowestHealthWithAuraCount,
 
     /// <summary>按职责取首个/逆序首个。get_unit_with_role</summary>

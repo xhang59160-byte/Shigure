@@ -173,15 +173,18 @@ public sealed class ShigureRuntime
         (_className, _specName) = ClassNames.GetClassAndSpecName(_classId, _specId);
         _keymap.SelectForClass(_classId);
 
-        if (!_enabled)
+        if (!_state.GetBool("有效性"))
         {
+            _moduleName = null;
+            _currentStep = "等待游戏状态";
             _unitInfo = new Dictionary<string, object?>();
             return;
         }
 
-        if (!_state.GetBool("有效性"))
+        _moduleName = _logicRegistry.ResolveDynamicState(_classId, _specId, _state);
+
+        if (!_enabled)
         {
-            _currentStep = "等待游戏状态";
             _unitInfo = new Dictionary<string, object?>();
             return;
         }
@@ -221,6 +224,71 @@ public sealed class ShigureRuntime
             _state,
             _currentStep,
             _unitInfo,
+            BuildDynamicValues(_state),
             _scanMs));
+    }
+
+    private static IReadOnlyList<DynamicValueSnapshot> BuildDynamicValues(GameState? state)
+    {
+        if (state is null)
+        {
+            return [];
+        }
+
+        var values = new List<DynamicValueSnapshot>();
+        if (state.Values.TryGetValue("$units", out var unitsObj)
+            && unitsObj is IReadOnlyDictionary<string, string?> units)
+        {
+            foreach (var (name, slot) in units.OrderBy(kv => kv.Key, StringComparer.CurrentCultureIgnoreCase))
+            {
+                values.Add(new DynamicValueSnapshot("单位", name, FormatUnitSlot(state, slot)));
+            }
+        }
+
+        if (state.Values.TryGetValue("$unithealth", out var healthObj)
+            && healthObj is IReadOnlyDictionary<string, object?> unitHealth)
+        {
+            foreach (var (name, value) in unitHealth.OrderBy(kv => kv.Key, StringComparer.CurrentCultureIgnoreCase))
+            {
+                values.Add(new DynamicValueSnapshot("值名称", name, FormatSnapshotValue(value)));
+            }
+        }
+
+        if (state.Values.TryGetValue("$counts", out var countsObj)
+            && countsObj is IReadOnlyDictionary<string, int> counts)
+        {
+            foreach (var (name, value) in counts.OrderBy(kv => kv.Key, StringComparer.CurrentCultureIgnoreCase))
+            {
+                values.Add(new DynamicValueSnapshot("数量", name, value.ToString()));
+            }
+        }
+
+        return values;
+    }
+
+    private static string FormatUnitSlot(GameState state, string? slot)
+    {
+        if (string.IsNullOrWhiteSpace(slot))
+        {
+            return "-";
+        }
+
+        if (state.Group.TryGetValue(slot, out var member)
+            && member.TryGetValue("生命值", out var health))
+        {
+            return $"{slot} (生命值 {FormatSnapshotValue(health)})";
+        }
+
+        return slot;
+    }
+
+    private static string FormatSnapshotValue(object? value)
+    {
+        return value switch
+        {
+            null => "-",
+            bool b => b ? "是" : "否",
+            _ => value.ToString() ?? "-"
+        };
     }
 }

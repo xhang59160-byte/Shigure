@@ -9,7 +9,18 @@ public enum ConditionFieldType
     String
 }
 
-public sealed record ConditionField(string Name, string DisplayName, ConditionFieldType Type)
+public enum ConditionFieldCategory
+{
+    State,
+    Spell,
+    DynamicUnit
+}
+
+public sealed record ConditionField(
+    string Name,
+    string DisplayName,
+    ConditionFieldType Type,
+    ConditionFieldCategory Category = ConditionFieldCategory.State)
 {
     public override string ToString() => DisplayName;
 }
@@ -64,7 +75,7 @@ public sealed class ConditionFieldCatalog
 
             if (node is JsonObject field && field.ContainsKey("step"))
             {
-                AddField(fields, seen, key, key, ReadType(field));
+                AddField(fields, seen, key, key, ReadType(field), ConditionFieldCategory.State);
             }
         }
 
@@ -74,7 +85,7 @@ public sealed class ConditionFieldCatalog
             {
                 if (node is JsonObject field && field.ContainsKey("step"))
                 {
-                    AddField(fields, seen, $"spells.{spellName}", $"技能: {spellName}", ReadType(field));
+                    AddField(fields, seen, $"spells.{spellName}", $"技能: {spellName}", ReadType(field), ConditionFieldCategory.Spell);
                 }
             }
         }
@@ -122,11 +133,12 @@ public sealed class ConditionFieldCatalog
         HashSet<string> seen,
         string name,
         string displayName,
-        ConditionFieldType type)
+        ConditionFieldType type,
+        ConditionFieldCategory category = ConditionFieldCategory.State)
     {
         if (seen.Add(name))
         {
-            fields.Add(new ConditionField(name, displayName, type));
+            fields.Add(new ConditionField(name, displayName, type, category));
         }
     }
 

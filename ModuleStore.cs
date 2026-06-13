@@ -484,8 +484,7 @@ public static class ModuleLogic
     public static LogicDecision Run(ModuleDefinition module, GameState state, KeymapService keymap)
     {
         var info = CreateInfo(module, state);
-        var unitSlots = ResolveUnits(module, state);
-        ResolveCounts(module, state);
+        var unitSlots = ResolveDynamicFields(module, state);
 
         foreach (var rule in module.Rules.Where(rule => rule.Enabled))
         {
@@ -532,6 +531,13 @@ public static class ModuleLogic
     }
 
     // 把模块定义的动态单位/数量各解析一次, 写入当前帧 state.Values 供条件求值与目标解析使用。
+    public static Dictionary<string, string?> ResolveDynamicFields(ModuleDefinition module, GameState state)
+    {
+        var unitSlots = ResolveUnits(module, state);
+        ResolveCounts(module, state);
+        return unitSlots;
+    }
+
     private static Dictionary<string, string?> ResolveUnits(ModuleDefinition module, GameState state)
     {
         var unitSlots = new Dictionary<string, string?>(StringComparer.Ordinal);

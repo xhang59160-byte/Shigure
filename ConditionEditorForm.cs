@@ -88,20 +88,27 @@ public static class ConditionExpression
 }
 
 /// <summary>
-/// 条件可视化编辑弹窗: 每行一个比较项(连接/字段/判断/值/删除),
-/// 字段下拉来自 config.json 按职业/专精过滤后的目录, 值控件按字段类型自适应。
+/// 条件可视化编辑弹窗: 每行一个比较项(连接/类型/字段/判断/值/删除),
+/// 字段下拉按类型过滤, 值控件按字段类型自适应。
 /// </summary>
 public sealed class ConditionEditorForm : Form
 {
-    private const int ConnectorWidth = 70;
-    private const int FieldWidth = 230;
-    private const int OpWidth = 74;
-    private const int ValueWidth = 150;
+    private const int ConnectorWidth = 90;
+    private const int CategoryWidth = 110;
+    private const int FieldWidth = 270;
+    private const int OpWidth = 90;
+    private const int ValueWidth = 170;
     private const int DeleteWidth = 36;
-    private const int RowTotalWidth = ConnectorWidth + FieldWidth + OpWidth + ValueWidth + DeleteWidth;
+    private const int RowTotalWidth = ConnectorWidth + CategoryWidth + FieldWidth + OpWidth + ValueWidth + DeleteWidth;
 
     private static readonly string[] AllOperators = ["==", "!=", ">", ">=", "<", "<="];
     private static readonly string[] EqualityOperators = ["==", "!="];
+    private static readonly CategoryItem[] CategoryItems =
+    [
+        new("状态", ConditionFieldCategory.State),
+        new("技能", ConditionFieldCategory.Spell),
+        new("动态单位", ConditionFieldCategory.DynamicUnit)
+    ];
 
     private readonly IReadOnlyList<ConditionField> _fields;
     private readonly FlowLayoutPanel _rowsPanel = new();
@@ -136,7 +143,7 @@ public sealed class ConditionEditorForm : Form
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
         BackColor = UiTheme.Surface;
         ForeColor = UiTheme.Text;
-        ClientSize = new Size(RowTotalWidth + 50, 430);
+        ClientSize = new Size(RowTotalWidth + 50, 460);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -185,20 +192,22 @@ public sealed class ConditionEditorForm : Form
             Height = 24,
             BackColor = UiTheme.Surface,
             Margin = new Padding(0),
-            ColumnCount = 5,
+            ColumnCount = 6,
             RowCount = 1
         };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ConnectorWidth));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, CategoryWidth));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, FieldWidth));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, OpWidth));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ValueWidth));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DeleteWidth));
 
         header.Controls.Add(CreateHeaderLabel("连接"), 0, 0);
-        header.Controls.Add(CreateHeaderLabel("字段"), 1, 0);
-        header.Controls.Add(CreateHeaderLabel("判断"), 2, 0);
-        header.Controls.Add(CreateHeaderLabel("值"), 3, 0);
-        header.Controls.Add(CreateHeaderLabel(string.Empty), 4, 0);
+        header.Controls.Add(CreateHeaderLabel("类型"), 1, 0);
+        header.Controls.Add(CreateHeaderLabel("字段"), 2, 0);
+        header.Controls.Add(CreateHeaderLabel("判断"), 3, 0);
+        header.Controls.Add(CreateHeaderLabel("值"), 4, 0);
+        header.Controls.Add(CreateHeaderLabel(string.Empty), 5, 0);
         return header;
     }
 
@@ -277,10 +286,11 @@ public sealed class ConditionEditorForm : Form
             Height = 34,
             BackColor = UiTheme.Surface,
             Margin = new Padding(0, 2, 0, 2),
-            ColumnCount = 5,
+            ColumnCount = 6,
             RowCount = 1
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ConnectorWidth));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, CategoryWidth));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, FieldWidth));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, OpWidth));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ValueWidth));
@@ -293,11 +303,16 @@ public sealed class ConditionEditorForm : Form
         connectorBox.Dock = DockStyle.Fill;
         connectorBox.Margin = new Padding(0, 2, 8, 2);
 
+        var categoryBox = new ComboBox();
+        UiTheme.StyleComboBox(categoryBox);
+        categoryBox.Items.AddRange(CategoryItems);
+        categoryBox.Dock = DockStyle.Fill;
+        categoryBox.Margin = new Padding(0, 2, 8, 2);
+
         var fieldBox = new ComboBox();
         UiTheme.StyleComboBox(fieldBox);
         fieldBox.Dock = DockStyle.Fill;
         fieldBox.Margin = new Padding(0, 2, 8, 2);
-        PopulateFields(fieldBox, term?.Field);
 
         var opBox = new ComboBox();
         UiTheme.StyleComboBox(opBox);
@@ -319,16 +334,25 @@ public sealed class ConditionEditorForm : Form
         deleteButton.Padding = new Padding(0);
 
         panel.Controls.Add(connectorBox, 0, 0);
-        panel.Controls.Add(fieldBox, 1, 0);
-        panel.Controls.Add(opBox, 2, 0);
-        panel.Controls.Add(valueHost, 3, 0);
-        panel.Controls.Add(deleteButton, 4, 0);
+        panel.Controls.Add(categoryBox, 1, 0);
+        panel.Controls.Add(fieldBox, 2, 0);
+        panel.Controls.Add(opBox, 3, 0);
+        panel.Controls.Add(valueHost, 4, 0);
+        panel.Controls.Add(deleteButton, 5, 0);
 
-        var row = new ConditionRow(panel, connectorBox, fieldBox, opBox, valueHost);
+        var row = new ConditionRow(panel, connectorBox, categoryBox, fieldBox, opBox, valueHost);
+        SelectCategory(row, ResolveCategory(term?.Field));
+        PopulateFields(row, term?.Field);
         PopulateOps(row, term?.Op);
         CreateValueControl(row, term?.Value, preserveRaw: true);
 
         connectorBox.SelectedIndexChanged += (_, _) => UpdatePreview();
+        categoryBox.SelectedIndexChanged += (_, _) =>
+        {
+            PopulateFields(row, null);
+            OnFieldChanged(row);
+            UpdatePreview();
+        };
         fieldBox.SelectedIndexChanged += (_, _) =>
         {
             OnFieldChanged(row);
@@ -358,12 +382,14 @@ public sealed class ConditionEditorForm : Form
         }
     }
 
-    private void PopulateFields(ComboBox fieldBox, string? currentField)
+    private void PopulateFields(ConditionRow row, string? currentField)
     {
+        var fieldBox = row.FieldBox;
+        var category = row.SelectedCategory?.Category ?? ConditionFieldCategory.State;
         fieldBox.Items.Clear();
-        foreach (var field in _fields)
+        foreach (var field in _fields.Where(field => field.Category == category))
         {
-            fieldBox.Items.Add(new FieldItem(field.Name, field.DisplayName, field.Type, IsCustom: false));
+            fieldBox.Items.Add(new FieldItem(field.Name, field.DisplayName, field.Type, field.Category, IsCustom: false));
         }
 
         if (!string.IsNullOrWhiteSpace(currentField))
@@ -372,7 +398,7 @@ public sealed class ConditionEditorForm : Form
             if (index < 0)
             {
                 // 目录里没有的字段(如 group.* 或手写字段)保留为自定义项, 避免丢失原条件。
-                fieldBox.Items.Add(new FieldItem(currentField, $"{currentField} (自定义)", ConditionFieldType.Int, IsCustom: true));
+                fieldBox.Items.Add(new FieldItem(currentField, $"{currentField} (自定义)", ConditionFieldType.Int, category, IsCustom: true));
                 index = fieldBox.Items.Count - 1;
             }
 
@@ -384,6 +410,40 @@ public sealed class ConditionEditorForm : Form
         {
             fieldBox.SelectedIndex = 0;
         }
+    }
+
+    private ConditionFieldCategory ResolveCategory(string? fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return ConditionFieldCategory.State;
+        }
+
+        var field = _fields.FirstOrDefault(field =>
+            string.Equals(field.Name, fieldName, StringComparison.OrdinalIgnoreCase));
+        if (field is not null)
+        {
+            return field.Category;
+        }
+
+        return fieldName.StartsWith("spells.", StringComparison.OrdinalIgnoreCase)
+            || fieldName.StartsWith("spell.", StringComparison.OrdinalIgnoreCase)
+                ? ConditionFieldCategory.Spell
+                : ConditionFieldCategory.State;
+    }
+
+    private static void SelectCategory(ConditionRow row, ConditionFieldCategory category)
+    {
+        for (var i = 0; i < row.CategoryBox.Items.Count; i++)
+        {
+            if (row.CategoryBox.Items[i] is CategoryItem item && item.Category == category)
+            {
+                row.CategoryBox.SelectedIndex = i;
+                return;
+            }
+        }
+
+        row.CategoryBox.SelectedIndex = 0;
     }
 
     private static int FindFieldIndex(ComboBox fieldBox, string fieldName)
@@ -563,7 +623,12 @@ public sealed class ConditionEditorForm : Form
         };
     }
 
-    private sealed record FieldItem(string Name, string Display, ConditionFieldType Type, bool IsCustom)
+    private sealed record CategoryItem(string Display, ConditionFieldCategory Category)
+    {
+        public override string ToString() => Display;
+    }
+
+    private sealed record FieldItem(string Name, string Display, ConditionFieldType Type, ConditionFieldCategory Category, bool IsCustom)
     {
         public override string ToString() => Display;
     }
@@ -571,17 +636,20 @@ public sealed class ConditionEditorForm : Form
     private sealed class ConditionRow(
         TableLayoutPanel panel,
         ComboBox connector,
+        ComboBox categoryBox,
         ComboBox fieldBox,
         ComboBox opBox,
         Panel valueHost)
     {
         public TableLayoutPanel Panel { get; } = panel;
         public ComboBox Connector { get; } = connector;
+        public ComboBox CategoryBox { get; } = categoryBox;
         public ComboBox FieldBox { get; } = fieldBox;
         public ComboBox OpBox { get; } = opBox;
         public Panel ValueHost { get; } = valueHost;
         public Control? ValueControl { get; set; }
 
+        public CategoryItem? SelectedCategory => CategoryBox.SelectedItem as CategoryItem;
         public FieldItem? SelectedField => FieldBox.SelectedItem as FieldItem;
     }
 }

@@ -27,11 +27,7 @@ public sealed class LogicRegistry
 
     public LogicDecision Run(int? classId, int? specId, string? specName, GameState state)
     {
-        var module = _moduleStore.FindBestMatch(
-            classId,
-            specId,
-            state.GetInt("队伍类型"),
-            state.GetInt("英雄天赋"));
+        var module = FindModule(classId, specId, state);
         if (module is not null)
         {
             return ModuleLogic.Run(module, state, _keymap);
@@ -43,6 +39,27 @@ public sealed class LogicRegistry
         }
 
         return _defaultLogic.Run(state, specName);
+    }
+
+    public string? ResolveDynamicState(int? classId, int? specId, GameState state)
+    {
+        var module = FindModule(classId, specId, state);
+        if (module is null)
+        {
+            return null;
+        }
+
+        ModuleLogic.ResolveDynamicFields(module, state);
+        return module.Name;
+    }
+
+    private ModuleDefinition? FindModule(int? classId, int? specId, GameState state)
+    {
+        return _moduleStore.FindBestMatch(
+            classId,
+            specId,
+            state.GetInt("队伍类型"),
+            state.GetInt("英雄天赋"));
     }
 }
 

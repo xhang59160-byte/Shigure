@@ -10,12 +10,6 @@
   },
   "Units": [
     {
-      "Name": "最低单位70",
-      "Kind": "LowestHealth",
-      "HealthThreshold": 70,
-      "Reverse": false
-    },
-    {
       "Name": "无盾坦克",
       "Kind": "UnitWithRoleWithoutAura",
       "Role": 1,
@@ -23,13 +17,36 @@
       "AuraNames": [
         "真言术：盾"
       ]
+    },
+    {
+      "Name": "最低单位",
+      "HealthName": "最低单位值",
+      "Kind": "LowestHealth",
+      "HealthThreshold": 99,
+      "Reverse": false
+    },
+    {
+      "Name": "无盾最低",
+      "HealthName": "无盾最低值",
+      "Kind": "LowestHealthWithoutAura",
+      "HealthThreshold": 100,
+      "Reverse": false,
+      "AuraNames": [
+        "真言术：盾"
+      ]
+    },
+    {
+      "Name": "驱散单位",
+      "Kind": "UnitWithDispelType",
+      "Reverse": false,
+      "DispelType": 1
     }
   ],
   "Counts": [],
   "Rules": [
     {
       "Enabled": true,
-      "Condition": "生命值 >= 50 && spells.绝望祷言 == 0",
+      "Condition": "生命值 <= 50 && spells.绝望祷言 == 0",
       "Unit": 0,
       "Spell": "绝望祷言",
       "Hotkey": "",
@@ -37,9 +54,25 @@
     },
     {
       "Enabled": true,
-      "Condition": "",
-      "UnitName": "最低单位70",
+      "Condition": "spells.真言术：盾 == 0",
+      "UnitName": "无盾坦克",
+      "Spell": "真言术：盾",
+      "Hotkey": "",
+      "Step": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位值 <= 75",
+      "UnitName": "最低单位",
       "Spell": "苦修",
+      "Hotkey": "",
+      "Step": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "无盾最低 == true",
+      "UnitName": "无盾最低",
+      "Spell": "真言术：盾",
       "Hotkey": "",
       "Step": ""
     }

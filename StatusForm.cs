@@ -9,6 +9,7 @@ public sealed class StatusForm : Form
     private bool _hasKnownBounds;
 
     private ListView _stateList = null!;
+    private ListView _dynamicUnitList = null!;
     private ListView _spellList = null!;
     private ListView _partyList = null!;
     private ListView _unitInfoList = null!;
@@ -89,23 +90,27 @@ public sealed class StatusForm : Form
         };
 
         _stateList = UiTheme.CreateListView(Font, ("#", 40), ("名称", 150), ("值", 130));
+        _dynamicUnitList = UiTheme.CreateListView(Font, ("类型", 68), ("名称", 120), ("值", 160));
         _spellList = UiTheme.CreateListView(Font, ("#", 40), ("技能", 150), ("状态", 110));
 
         var statusSplit = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = UiTheme.Surface,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 1,
             Margin = new Padding(0)
         };
-        statusSplit.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        statusSplit.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        statusSplit.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34));
+        statusSplit.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        statusSplit.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
         statusSplit.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         _stateList.Margin = new Padding(0, 0, 5, 0);
+        _dynamicUnitList.Margin = new Padding(5, 0, 5, 0);
         _spellList.Margin = new Padding(5, 0, 0, 0);
         statusSplit.Controls.Add(_stateList, 0, 0);
-        statusSplit.Controls.Add(_spellList, 1, 0);
+        statusSplit.Controls.Add(_dynamicUnitList, 1, 0);
+        statusSplit.Controls.Add(_spellList, 2, 0);
         _partyList = UiTheme.CreateListView(Font, ("单位", 110), ("摘要", 700));
         _unitInfoList = UiTheme.CreateListView(Font, ("名称", 200), ("值", 480));
         _logTextBox = new TextBox
@@ -386,6 +391,7 @@ public sealed class StatusForm : Form
     private void UpdateLists(RenderSnapshot snapshot)
     {
         UpdateStateList(snapshot);
+        UpdateDynamicUnitList(snapshot);
         UpdateSpellList(snapshot);
         UpdatePartyList(snapshot);
         UpdateUnitInfoList(snapshot);
@@ -409,7 +415,7 @@ public sealed class StatusForm : Form
 
             foreach (var (key, value) in snapshot.State.Values)
             {
-                if (key is "spells" or "group")
+                if (key is "spells" or "group" || key.StartsWith('$'))
                 {
                     continue;
                 }
@@ -420,6 +426,28 @@ public sealed class StatusForm : Form
         }
 
         ReplaceItems(_stateList, items);
+    }
+
+    private void UpdateDynamicUnitList(RenderSnapshot snapshot)
+    {
+        var items = new List<ListViewItem>();
+        if (snapshot.State is null)
+        {
+            items.Add(new ListViewItem(new[] { "-", "动态单位", "等待游戏状态" }));
+        }
+        else if (snapshot.DynamicValues.Count == 0)
+        {
+            items.Add(new ListViewItem(new[] { "-", "动态单位", "无数据" }));
+        }
+        else
+        {
+            foreach (var value in snapshot.DynamicValues)
+            {
+                items.Add(new ListViewItem(new[] { value.Kind, value.Name, value.Value }));
+            }
+        }
+
+        ReplaceItems(_dynamicUnitList, items);
     }
 
     private void UpdateSpellList(RenderSnapshot snapshot)
