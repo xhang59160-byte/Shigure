@@ -124,15 +124,15 @@ public sealed class ModuleEditorControl : UserControl
         {
             Dock = DockStyle.Fill,
             BackColor = UiTheme.Surface,
-            Padding = new Padding(8, 0, 0, 0),
+            Padding = new Padding(8, 0, 8, 4),
             ColumnCount = 1,
             RowCount = 5
         };
         editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 74));
         editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 74));
-        editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 128));
+        editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 152));
         editor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        editor.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
         editor.Controls.Add(BuildNameRow(), 0, 0);
         editor.Controls.Add(BuildMatchRow(), 0, 1);
@@ -153,7 +153,7 @@ public sealed class ModuleEditorControl : UserControl
             Margin = new Padding(0, 2, 0, 4)
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -192,24 +192,18 @@ public sealed class ModuleEditorControl : UserControl
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             BackColor = UiTheme.Surface,
-            Margin = new Padding(6, 0, 0, 0)
+            Margin = new Padding(6, 0, 0, 0),
+            Padding = new Padding(0)
         };
+        buttons.Resize += (_, _) => LayoutUnitActionButtons(buttons);
 
-        var addButton = UiTheme.CreateButton("添加", UiTheme.Field, UiTheme.Text);
-        addButton.Width = 70;
-        addButton.Height = 28;
-        addButton.Margin = new Padding(0, 0, 0, 4);
+        var addButton = CreateUnitActionButton("添加", UiTheme.Field, UiTheme.Text, bottomGap: true);
         addButton.Click += (_, _) => AddUnit();
 
-        var editButton = UiTheme.CreateButton("编辑", UiTheme.Field, UiTheme.Text);
-        editButton.Width = 70;
-        editButton.Height = 28;
-        editButton.Margin = new Padding(0, 0, 0, 4);
+        var editButton = CreateUnitActionButton("编辑", UiTheme.Field, UiTheme.Text, bottomGap: true);
         editButton.Click += (_, _) => EditSelectedUnit();
 
-        var deleteButton = UiTheme.CreateButton("删除", UiTheme.Field, UiTheme.Danger);
-        deleteButton.Width = 70;
-        deleteButton.Height = 28;
+        var deleteButton = CreateUnitActionButton("删除", UiTheme.Field, UiTheme.Danger, bottomGap: false);
         deleteButton.Click += (_, _) => DeleteSelectedUnit();
 
         buttons.Controls.Add(addButton);
@@ -299,6 +293,7 @@ public sealed class ModuleEditorControl : UserControl
     private Control BuildRulesGrid()
     {
         _rulesGrid.Dock = DockStyle.Fill;
+        _rulesGrid.Margin = new Padding(0);
         _rulesGrid.BackgroundColor = UiTheme.Surface;
         _rulesGrid.BorderStyle = BorderStyle.None;
         _rulesGrid.GridColor = UiTheme.Field;
@@ -321,7 +316,7 @@ public sealed class ModuleEditorControl : UserControl
         {
             Name = "Enabled",
             HeaderText = "启用",
-            Width = 50,
+            Width = 100,
             AutoSizeMode = DataGridViewAutoSizeColumnMode.None
         });
         _spellColumn.Name = "Spell";
@@ -332,7 +327,7 @@ public sealed class ModuleEditorControl : UserControl
         _rulesGrid.Columns.Add(_spellColumn);
         _unitColumn.Name = "Unit";
         _unitColumn.HeaderText = "目标";
-        _unitColumn.Width = 90;
+        _unitColumn.Width = 150;
         _unitColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
         _unitColumn.FlatStyle = FlatStyle.Flat;
         _rulesGrid.Columns.Add(_unitColumn);
@@ -499,7 +494,7 @@ public sealed class ModuleEditorControl : UserControl
 
     private void AddUnit()
     {
-        using var editor = new UnitEditorForm(GetAuraFields(), CollectTakenNames(null), null, null);
+        using var editor = new UnitEditorForm(GetAuraFields(), CollectTakenNames(), null, null);
         if (editor.ShowDialog(FindForm()) != DialogResult.OK)
         {
             return;
@@ -529,8 +524,9 @@ public sealed class ModuleEditorControl : UserControl
         var existingUnit = kind == UnitRowKind.Unit ? _units[index] : null;
         var existingCount = kind == UnitRowKind.Count ? _counts[index] : null;
         var ownName = existingUnit?.Name ?? existingCount?.Name;
+        var ownHealthName = existingUnit?.HealthName;
 
-        using var editor = new UnitEditorForm(GetAuraFields(), CollectTakenNames(ownName), existingUnit, existingCount);
+        using var editor = new UnitEditorForm(GetAuraFields(), CollectTakenNames(ownName, ownHealthName), existingUnit, existingCount);
         if (editor.ShowDialog(FindForm()) != DialogResult.OK)
         {
             return;
@@ -604,7 +600,8 @@ public sealed class ModuleEditorControl : UserControl
         _unitsList.Items.Clear();
         foreach (var unit in _units)
         {
-            _unitsList.Items.Add(new ListViewItem([unit.Name, "单位", DescribeUnit(unit)]));
+            var name = string.IsNullOrWhiteSpace(unit.HealthName) ? unit.Name : $"{unit.Name} / {unit.HealthName}";
+            _unitsList.Items.Add(new ListViewItem([name, "单位", DescribeUnit(unit)]));
         }
 
         foreach (var count in _counts)
@@ -635,8 +632,8 @@ public sealed class ModuleEditorControl : UserControl
             .ToList();
     }
 
-    // 名称查重集合: 其它单位/数量 + 当前职业/专精的状态字段与 group 字段; 排除正在编辑项自身。
-    private IReadOnlyCollection<string> CollectTakenNames(string? ownName)
+    // 名称查重集合: 其它单位/数量(含生命值名) + 当前职业/专精的状态字段与 group 字段; 排除正在编辑项自身的名称。
+    private IReadOnlyCollection<string> CollectTakenNames(params string?[] ownNames)
     {
         var classId = ReadMatchCombo(_classBox);
         var specId = ReadMatchCombo(_specBox);
@@ -645,6 +642,10 @@ public sealed class ModuleEditorControl : UserControl
         foreach (var unit in _units)
         {
             taken.Add(unit.Name);
+            if (!string.IsNullOrWhiteSpace(unit.HealthName))
+            {
+                taken.Add(unit.HealthName);
+            }
         }
 
         foreach (var count in _counts)
@@ -662,9 +663,12 @@ public sealed class ModuleEditorControl : UserControl
             taken.Add(field.Name);
         }
 
-        if (!string.IsNullOrEmpty(ownName))
+        foreach (var ownName in ownNames)
         {
-            taken.Remove(ownName);
+            if (!string.IsNullOrEmpty(ownName))
+            {
+                taken.Remove(ownName);
+            }
         }
 
         return taken;
@@ -839,6 +843,12 @@ public sealed class ModuleEditorControl : UserControl
 
             // 裸单位名作为存在性布尔。
             fields.Add(new ConditionField(unit.Name, $"{unit.Name} (存在)", ConditionFieldType.Bool));
+
+            // 名称2: 该单位 生命值 的直接命名数值字段。
+            if (!string.IsNullOrWhiteSpace(unit.HealthName))
+            {
+                fields.Add(new ConditionField(unit.HealthName, $"{unit.HealthName} (生命值)", ConditionFieldType.Int));
+            }
         }
 
         foreach (var count in _counts)
@@ -854,15 +864,13 @@ public sealed class ModuleEditorControl : UserControl
 
     private Control BuildActionRow()
     {
-        var row = new TableLayoutPanel
+        var row = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = UiTheme.Surface,
-            ColumnCount = 2,
-            RowCount = 1
+            Margin = new Padding(0),
+            Padding = new Padding(0)
         };
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250));
 
         var hint = new Label
         {
@@ -870,31 +878,34 @@ public sealed class ModuleEditorControl : UserControl
             Dock = DockStyle.Fill,
             ForeColor = UiTheme.Muted,
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true
+            AutoEllipsis = true,
+            Margin = new Padding(0)
         };
-        row.Controls.Add(hint, 0, 0);
 
         var buttons = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Right,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            BackColor = UiTheme.Surface
+            BackColor = UiTheme.Surface,
+            Margin = new Padding(0),
+            Padding = new Padding(0, 6, 0, 6)
         };
 
         var saveButton = UiTheme.CreateButton("保存", UiTheme.Accent, Color.Black);
-        saveButton.Width = 72;
-        saveButton.Height = 30;
+        saveButton.Margin = new Padding(8, 0, 0, 0);
         saveButton.Click += (_, _) => SaveSelectedModule();
 
         var deleteButton = UiTheme.CreateButton("删除", UiTheme.Field, UiTheme.Danger);
-        deleteButton.Width = 72;
-        deleteButton.Height = 30;
+        deleteButton.Margin = new Padding(8, 0, 0, 0);
         deleteButton.Click += (_, _) => DeleteSelectedModule();
 
         buttons.Controls.Add(saveButton);
         buttons.Controls.Add(deleteButton);
-        row.Controls.Add(buttons, 1, 0);
+        row.Controls.Add(hint);
+        row.Controls.Add(buttons);
         return row;
     }
 
@@ -1146,6 +1157,30 @@ public sealed class ModuleEditorControl : UserControl
     private static int MeasureLabelColumnWidth(string text, Font font)
     {
         return TextRenderer.MeasureText(text, font).Width + 18;
+    }
+
+    private static Button CreateUnitActionButton(string text, Color backColor, Color foreColor, bool bottomGap)
+    {
+        var button = UiTheme.CreateButton(text, backColor, foreColor);
+        button.AutoSize = false;
+        button.AutoEllipsis = true;
+        button.Height = 32;
+        button.Margin = new Padding(0, 0, 0, bottomGap ? 6 : 0);
+        button.Padding = new Padding(0);
+        button.TextAlign = ContentAlignment.MiddleCenter;
+        return button;
+    }
+
+    private static void LayoutUnitActionButtons(FlowLayoutPanel panel)
+    {
+        var width = Math.Max(0, panel.ClientSize.Width);
+        foreach (Control control in panel.Controls)
+        {
+            if (control is Button button)
+            {
+                button.Width = width;
+            }
+        }
     }
 
     private static void StyleTextBox(TextBox textBox)

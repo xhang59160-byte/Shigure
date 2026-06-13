@@ -8,7 +8,9 @@ namespace Shigure;
 /// </summary>
 public sealed class UnitEditorForm : Form
 {
-    private const int RowWidth = 392;
+    private const int RowWidth = 800;
+    private const int LabelWidth = 132;
+    private const int ControlLeft = LabelWidth + 10;
 
     private static readonly RoleOption[] RoleOptions =
     [
@@ -41,6 +43,7 @@ public sealed class UnitEditorForm : Form
     private readonly HashSet<string> _takenNames;
 
     private readonly TextBox _nameBox = new();
+    private readonly TextBox _healthNameBox = new();
     private readonly ComboBox _categoryBox = new();
     private readonly ComboBox _selectorBox = new();
     private readonly FlowLayoutPanel _paramPanel = new();
@@ -75,6 +78,7 @@ public sealed class UnitEditorForm : Form
         InitializeComponent();
         Seed(existingUnit, existingCount);
         UpdateParamVisibility();
+        UpdateHealthNameState();
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -89,7 +93,7 @@ public sealed class UnitEditorForm : Form
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
         BackColor = UiTheme.Surface;
         ForeColor = UiTheme.Text;
-        ClientSize = new Size(RowWidth + 36, 430);
+        ClientSize = new Size(RowWidth + 36, 500);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -104,25 +108,28 @@ public sealed class UnitEditorForm : Form
             ColumnCount = 1,
             RowCount = 4
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
         Controls.Add(root);
 
         UiTheme.StyleComboBox(_categoryBox);
+        _categoryBox.DropDownWidth = 180;
         _categoryBox.Items.AddRange(["单位 (可作目标)", "数量 (仅条件)"]);
         _categoryBox.SelectedIndex = 0;
         _categoryBox.SelectedIndexChanged += (_, _) =>
         {
             PopulateSelectors();
             UpdateParamVisibility();
+            UpdateHealthNameState();
         };
 
         UiTheme.StyleComboBox(_selectorBox);
+        _selectorBox.DropDownWidth = 360;
         _selectorBox.SelectedIndexChanged += (_, _) => UpdateParamVisibility();
 
-        root.Controls.Add(BuildLabeledRow("名称", StyleTextBox(_nameBox)), 0, 0);
+        root.Controls.Add(BuildSplitRow("名称", StyleTextBox(_nameBox), "名称2 (生命值)", StyleTextBox(_healthNameBox)), 0, 0);
         root.Controls.Add(BuildSplitRow("类别", _categoryBox, "选择器", _selectorBox), 0, 1);
 
         _paramPanel.Dock = DockStyle.Fill;
@@ -147,15 +154,18 @@ public sealed class UnitEditorForm : Form
         StyleNumeric(_thresholdBox);
 
         UiTheme.StyleComboBox(_roleBox);
+        _roleBox.DropDownWidth = 160;
         _roleBox.Items.AddRange(RoleOptions.Cast<object>().ToArray());
         _roleBox.SelectedIndex = 0;
 
         _reverseBox.Text = "取逆序最后一个匹配单位";
         _reverseBox.ForeColor = UiTheme.Text;
         _reverseBox.BackColor = UiTheme.Surface;
-        _reverseBox.AutoSize = true;
+        _reverseBox.AutoSize = false;
+        _reverseBox.TextAlign = ContentAlignment.MiddleLeft;
 
         UiTheme.StyleComboBox(_auraBox);
+        _auraBox.DropDownWidth = 360;
         foreach (var aura in _auraFields)
         {
             _auraBox.Items.Add(aura);
@@ -171,6 +181,7 @@ public sealed class UnitEditorForm : Form
         _aurasBox.BorderStyle = BorderStyle.FixedSingle;
         _aurasBox.CheckOnClick = true;
         _aurasBox.IntegralHeight = false;
+        _aurasBox.ItemHeight = 22;
         foreach (var aura in _auraFields)
         {
             _aurasBox.Items.Add(aura);
@@ -190,7 +201,7 @@ public sealed class UnitEditorForm : Form
         _roleRow = BuildLabeledRow("职责", _roleBox);
         _reverseRow = BuildLabeledRow(string.Empty, _reverseBox);
         _auraRow = BuildLabeledRow("光环", _auraBox);
-        _aurasRow = BuildLabeledRow("光环 (可多选)", _aurasBox, 92);
+        _aurasRow = BuildLabeledRow("光环 (可多选)", _aurasBox, 116);
         _auraCountRow = BuildLabeledRow("光环层数 =", _auraCountBox);
         _dispelRow = BuildLabeledRow("驱散类型", _dispelTypeBox);
 
@@ -241,6 +252,16 @@ public sealed class UnitEditorForm : Form
         if (_selectorBox.Items.Count > 0)
         {
             _selectorBox.SelectedIndex = 0;
+        }
+    }
+
+    // 名称2 只对"单位"类别有意义(把该单位的 生命值 暴露成数值条件字段); 数量类别禁用。
+    private void UpdateHealthNameState()
+    {
+        _healthNameBox.Enabled = !IsCountCategory;
+        if (IsCountCategory)
+        {
+            _healthNameBox.Text = string.Empty;
         }
     }
 
@@ -324,6 +345,7 @@ public sealed class UnitEditorForm : Form
         if (unit is not null)
         {
             _nameBox.Text = unit.Name;
+            _healthNameBox.Text = unit.HealthName ?? string.Empty;
             _categoryBox.SelectedIndex = 0;
             PopulateSelectors();
             SelectSelector(unit.Kind);
@@ -440,6 +462,23 @@ public sealed class UnitEditorForm : Form
             return;
         }
 
+        var healthName = _healthNameBox.Text.Trim();
+        if (healthName.Length > 0)
+        {
+            if (string.Equals(healthName, name, StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("名称2 不能与名称相同。", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ValidateName(healthName, out var healthMessage))
+            {
+                MessageBox.Show($"名称2: {healthMessage}", "Shigure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+        }
+
+        moduleUnit.HealthName = healthName.Length == 0 ? null : healthName;
         ResultUnit = moduleUnit;
         DialogResult = DialogResult.OK;
     }
@@ -602,10 +641,11 @@ public sealed class UnitEditorForm : Form
             Text = label,
             ForeColor = UiTheme.Muted,
             TextAlign = ContentAlignment.MiddleLeft,
-            Bounds = new Rectangle(0, 4, 120, 24)
+            Bounds = new Rectangle(0, 4, LabelWidth, 24),
+            AutoEllipsis = true
         };
 
-        control.Bounds = new Rectangle(126, 3, RowWidth - 126, height - 6);
+        control.Bounds = new Rectangle(ControlLeft, 3, RowWidth - ControlLeft, height - 6);
         panel.Controls.Add(control);
         panel.Controls.Add(labelControl);
         return panel;
@@ -620,21 +660,16 @@ public sealed class UnitEditorForm : Form
             Margin = new Padding(0)
         };
 
-        var labelAControl = new Label { Text = labelA, ForeColor = UiTheme.Muted, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(0, 4, 44, 24) };
-        controlA.Bounds = new Rectangle(46, 3, 150, 26);
-        var labelBControl = new Label { Text = labelB, ForeColor = UiTheme.Muted, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(208, 4, 50, 24) };
-        controlB.Bounds = new Rectangle(258, 3, RowWidth - 258, 26);
+        var labelAControl = new Label { Text = labelA, ForeColor = UiTheme.Muted, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(0, 5, 72, 28), AutoEllipsis = true };
+        controlA.Bounds = new Rectangle(80, 5, 230, 28);
+        var labelBControl = new Label { Text = labelB, ForeColor = UiTheme.Muted, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(330, 5, 130, 28), AutoEllipsis = true };
+        controlB.Bounds = new Rectangle(466, 5, RowWidth - 466, 28);
 
         panel.Controls.Add(controlA);
         panel.Controls.Add(labelAControl);
         panel.Controls.Add(controlB);
         panel.Controls.Add(labelBControl);
         return panel;
-    }
-
-    private static Control BuildLabeledRow(string label, TextBox control)
-    {
-        return BuildLabeledRow(label, (Control)control);
     }
 
     private static TextBox StyleTextBox(TextBox box)

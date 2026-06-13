@@ -47,7 +47,7 @@ public sealed class StatusForm : Form
 
         Text = "Shigure - 设置";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(640, 420);
+        MinimumSize = new Size(640, 540);
         Size = new Size(820, 560);
         BackColor = UiTheme.Background;
         ForeColor = UiTheme.Text;

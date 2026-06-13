@@ -670,6 +670,9 @@ public sealed class MainForm : Form, IMessageFilter
 
     private void SaveUiCache()
     {
+        var latestCache = UiCacheStore.Load();
+        _uiCache.ModuleRulesGridColumns = latestCache.ModuleRulesGridColumns;
+
         _uiCache.MainWindowBounds = new WindowBounds
         {
             X = Left,

@@ -407,6 +407,7 @@ public sealed class ModuleStore
         foreach (var unit in module.Units)
         {
             unit.Name = unit.Name.Trim();
+            unit.HealthName = string.IsNullOrWhiteSpace(unit.HealthName) ? null : unit.HealthName.Trim();
         }
 
         foreach (var count in module.Counts)
@@ -534,15 +535,30 @@ public static class ModuleLogic
     private static Dictionary<string, string?> ResolveUnits(ModuleDefinition module, GameState state)
     {
         var unitSlots = new Dictionary<string, string?>(StringComparer.Ordinal);
+        // 生命值名 → 该单位槽位的 生命值 值(未解析则为 null), 供条件直接按名引用。
+        var unitHealth = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var unit in module.Units)
         {
-            if (!string.IsNullOrWhiteSpace(unit.Name))
+            if (string.IsNullOrWhiteSpace(unit.Name))
             {
-                unitSlots[unit.Name] = UnitSelector.Resolve(unit, state);
+                continue;
+            }
+
+            var slot = UnitSelector.Resolve(unit, state);
+            unitSlots[unit.Name] = slot;
+
+            if (!string.IsNullOrWhiteSpace(unit.HealthName))
+            {
+                unitHealth[unit.HealthName] = slot is not null
+                    && state.Group.TryGetValue(slot, out var member)
+                    && member.TryGetValue("生命值", out var value)
+                        ? value
+                        : null;
             }
         }
 
         state.Values["$units"] = unitSlots;
+        state.Values["$unithealth"] = unitHealth;
         return unitSlots;
     }
 
@@ -702,6 +718,14 @@ public static class ModuleConditionEvaluator
             && counts.TryGetValue(key, out var countValue))
         {
             return countValue;
+        }
+
+        // 生命值名(整名匹配): 动态单位的 生命值 直接命名, 如 最低血量 < 50。未解析返回 null。
+        if (state.Values.TryGetValue("$unithealth", out var healthObj)
+            && healthObj is Dictionary<string, object?> unitHealth
+            && unitHealth.TryGetValue(key, out var healthValue))
+        {
+            return healthValue;
         }
 
         // 动态单位字段引用: <单位名>.<字段>, 解析槽位后读 group[槽位][字段]; 单位未解析返回 null。

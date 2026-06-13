@@ -40,6 +40,13 @@ public enum UnitSelectorKind
 public sealed class ModuleUnit
 {
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 可选的"生命值名": 非空时把该单位解析出槽位的 生命值 暴露成一个同名数值条件字段,
+    /// 例如取名 最低血量 后条件里可直接写 最低血量 &lt; 50, 等价于 单位名.生命值 &lt; 50。
+    /// </summary>
+    public string? HealthName { get; set; }
+
     public UnitSelectorKind Kind { get; set; } = UnitSelectorKind.LowestHealth;
     public int? HealthThreshold { get; set; }
     public int? Role { get; set; }
@@ -53,6 +60,7 @@ public sealed class ModuleUnit
         return new ModuleUnit
         {
             Name = Name,
+            HealthName = HealthName,
             Kind = Kind,
             HealthThreshold = HealthThreshold,
             Role = Role,
