@@ -31,10 +31,6 @@ C:\Users\bianw\OneDrive\VS Code\Shigure\Shigure\bin\Debug\net10.0-windows\Assets
 C:\Users\bianw\OneDrive\VS Code\Shigure\Shigure\bin\Debug\net10.0-windows\Assets\shigure-mark.svg
 C:\Users\bianw\OneDrive\VS Code\Shigure\Shigure\bin\Debug\net10.0-windows\Assets\shigure-emblem-arasaka.ico
 C:\Users\bianw\OneDrive\VS Code\Shigure\Shigure\bin\Debug\net10.0-windows\Assets\shigure-emblem-arasaka.png
-C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\shigure-emblem-arasaka.ico
-C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\shigure-emblem-arasaka.png
-C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\shigure-logo.svg
-C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\shigure-mark.svg
 C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\config.json
 C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\keymap\deathknight.json
 C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\keymap\demonhunter.json
@@ -147,3 +143,14 @@ C:\Users\bianw\OneDrive\VS Code\Shigure\bin\CodexBuild\Shigure.runtimeconfig.jso
 C:\Users\bianw\OneDrive\VS Code\Shigure\bin\CodexBuild\Shigure.dll
 C:\Users\bianw\OneDrive\VS Code\Shigure\bin\CodexBuild\Shigure.pdb
 C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\module\戒律-单人神谕者-测试.json
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon.ico
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-128.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-16.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-24.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-256.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-32.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-48.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-64.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-icon-transparent.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\Assets\arasaka-logo-transparent.png
+C:\Users\bianw\OneDrive\VS Code\Shigure\bin\Debug\net10.0-windows\module\邪DK-官方一键.json

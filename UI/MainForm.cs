@@ -5,6 +5,7 @@ namespace Shigure;
 public sealed class MainForm : Form, IMessageFilter
 {
     private const int ResizeGripSize = 8;
+    private const string HeaderIconPath = "Assets\\arasaka-icon-transparent.png";
 
     private Button _toggleKeyButton = null!;
     private ComboBox _modeComboBox = null!;
@@ -153,6 +154,19 @@ public sealed class MainForm : Form, IMessageFilter
         bar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         bar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
+        var brand = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 12, 0),
+            Padding = new Padding(0)
+        };
+
+        var headerIcon = CreateHeaderIcon();
+
         _titleLabel = new Label
         {
             Text = "Shigure",
@@ -160,8 +174,11 @@ public sealed class MainForm : Form, IMessageFilter
             Anchor = AnchorStyles.Left,
             Font = new Font(Font.FontFamily, 13F, FontStyle.Bold),
             ForeColor = UiTheme.Text,
-            Margin = new Padding(2, 0, 12, 0)
+            Margin = new Padding(8, 0, 0, 0)
         };
+
+        brand.Controls.Add(headerIcon);
+        brand.Controls.Add(_titleLabel);
 
         _runtimeStatusLabel = new Label
         {
@@ -173,6 +190,8 @@ public sealed class MainForm : Form, IMessageFilter
         };
 
         EnableDrag(bar);
+        EnableDrag(brand);
+        EnableDrag(headerIcon);
         EnableDrag(_titleLabel);
         EnableDrag(_runtimeStatusLabel);
 
@@ -201,10 +220,33 @@ public sealed class MainForm : Form, IMessageFilter
 
         buttons.Controls.AddRange(new Control[] { _enableButton, _settingsButton, closeButton });
 
-        bar.Controls.Add(_titleLabel, 0, 0);
+        bar.Controls.Add(brand, 0, 0);
         bar.Controls.Add(_runtimeStatusLabel, 1, 0);
         bar.Controls.Add(buttons, 2, 0);
         return bar;
+    }
+
+    private static PictureBox CreateHeaderIcon()
+    {
+        var box = new PictureBox
+        {
+            Size = new Size(32, 32),
+            MinimumSize = new Size(32, 32),
+            MaximumSize = new Size(32, 32),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
+            Anchor = AnchorStyles.Left
+        };
+
+        var path = Path.Combine(AppContext.BaseDirectory, HeaderIconPath);
+        if (File.Exists(path))
+        {
+            using var image = Image.FromFile(path);
+            box.Image = new Bitmap(image);
+        }
+
+        return box;
     }
 
     private Control BuildSettingsPanel()

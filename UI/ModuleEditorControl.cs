@@ -740,6 +740,7 @@ public sealed class ModuleEditorControl : UserControl
         _spellColumn.Items.Add(string.Empty);
         _spellColumn.Items.Add(ModuleSpecialActions.PauseSpell);
         _spellColumn.Items.Add(ModuleSpecialActions.FailedSpell);
+        _spellColumn.Items.Add(ModuleSpecialActions.OneKeySpell);
         foreach (var spell in _keymapCatalog.GetSpells(classId))
         {
             if (!_spellColumn.Items.Contains(spell))
@@ -803,9 +804,16 @@ public sealed class ModuleEditorControl : UserControl
             return;
         }
 
+        if (ModuleSpecialActions.IsOneKeySpell(spell))
+        {
+            cell.Items.Add("0");
+            cell.Value = "0";
+            return;
+        }
+
         var classId = ReadMatchCombo(_classBox);
         var allowed = ModuleSpecialActions.IsFailedSpell(spell)
-            ? _keymapCatalog.GetUnitsForSpells(classId, ModuleSpecialActions.FailedSpellNames)
+            ? _keymapCatalog.GetUnitsForSpells(classId, _keymapCatalog.GetFailedSpellNames(classId))
             : _keymapCatalog.GetUnitsForSpell(classId, spell);
 
         foreach (var unit in allowed)

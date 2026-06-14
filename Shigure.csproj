@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Shigure</AssemblyName>
     <RootNamespace>Shigure</RootNamespace>
-    <ApplicationIcon>Assets\shigure-emblem-arasaka.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\arasaka-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

@@ -82,5 +82,15 @@ public sealed class KeymapService
         var normalizedUnit = unit.GetValueOrDefault();
         return _hotkeys.TryGetValue((normalizedUnit, spell), out var hotkey) ? hotkey : null;
     }
+
+    public IReadOnlyDictionary<int, string> GetCurrentFailedSpells()
+    {
+        return _config.GetFailedSpells(_currentClassId);
+    }
+
+    public IReadOnlyDictionary<int, string> GetCurrentOneKeySpells()
+    {
+        return _config.GetOneKeySpells(_currentClassId);
+    }
 }
 

@@ -80,6 +80,11 @@ public sealed class KeymapCatalog
         return units.ToList();
     }
 
+    public IReadOnlyCollection<string> GetFailedSpellNames(int? classId)
+    {
+        return _config?.GetFailedSpells(classId).Values.ToList() ?? [];
+    }
+
     private KeymapEntries GetEntries(int? classId)
     {
         var path = ResolveKeymapPath(classId);

@@ -91,37 +91,43 @@
       "Enabled": true,
       "Condition": "施法技能 == 30",
       "Field": "耀层数",
-      "Delta": -1
+      "Delta": -1,
+      "Formula": ""
     },
     {
       "Enabled": true,
       "Condition": "施法技能 == 34",
       "Field": "暗影层数",
-      "Delta": -1
+      "Delta": -1,
+      "Formula": ""
     },
     {
       "Enabled": true,
       "Condition": "施法技能 == 34",
       "Field": "涌动层数",
-      "Delta": -1
+      "Delta": -1,
+      "Formula": ""
     },
     {
       "Enabled": true,
       "Condition": "施法技能 == 30",
       "Field": "耀90",
-      "Delta": -4
+      "Delta": -4,
+      "Formula": ""
     },
     {
       "Enabled": true,
       "Condition": "施法技能 == 30",
       "Field": "耀80",
-      "Delta": -4
+      "Delta": -4,
+      "Formula": ""
     },
     {
       "Enabled": true,
       "Condition": "施法技能 == 30",
       "Field": "有救赎数量",
-      "Delta": 4
+      "Delta": 4,
+      "Formula": ""
     }
   ],
   "Rules": [

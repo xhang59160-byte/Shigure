@@ -6,23 +6,7 @@ internal static class ModuleSpecialActions
 {
     public const string PauseSpell = "暂停";
     public const string FailedSpell = "失败法术";
-
-    private static readonly Dictionary<int, string> FailedSpellMap = new()
-    {
-        [1] = "心灵尖啸",
-        [2] = "群体驱散",
-        [3] = "真言术：障",
-        [4] = "终极苦修",
-        [5] = "神圣化身",
-        [6] = "光晕",
-        [7] = "神圣赞美诗",
-        [8] = "虚空形态",
-        [9] = "吸血鬼的拥抱",
-        [30] = "真言术：耀",
-        [35] = "福音"
-    };
-
-    public static IReadOnlyCollection<string> FailedSpellNames => FailedSpellMap.Values;
+    public const string OneKeySpell = "一键法术";
 
     public static bool IsPauseSpell(string? spell)
     {
@@ -34,10 +18,15 @@ internal static class ModuleSpecialActions
         return string.Equals(spell?.Trim(), FailedSpell, StringComparison.Ordinal);
     }
 
-    public static string? GetFailedSpell(GameState state)
+    public static bool IsOneKeySpell(string? spell)
+    {
+        return string.Equals(spell?.Trim(), OneKeySpell, StringComparison.Ordinal);
+    }
+
+    public static string? GetFailedSpell(GameState state, IReadOnlyDictionary<int, string>? failedSpellMap)
     {
         var failedSpellId = state.GetInt("法术失败");
-        if (!FailedSpellMap.TryGetValue(failedSpellId, out var spellName))
+        if (failedSpellMap is null || !failedSpellMap.TryGetValue(failedSpellId, out var spellName))
         {
             return null;
         }
@@ -46,6 +35,14 @@ internal static class ModuleSpecialActions
             && IsZero(cooldown)
                 ? spellName
                 : null;
+    }
+
+    public static string? GetOneKeySpell(GameState state, IReadOnlyDictionary<int, string>? oneKeySpellMap)
+    {
+        var oneKeyAssist = state.GetInt("一键辅助");
+        return oneKeySpellMap is not null && oneKeySpellMap.TryGetValue(oneKeyAssist, out var spellName)
+            ? spellName
+            : null;
     }
 
     private static bool IsZero(object? value)

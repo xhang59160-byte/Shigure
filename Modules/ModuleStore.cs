@@ -557,10 +557,25 @@ public static class ModuleLogic
     {
         var info = CreateInfo(module, state);
         var unitSlots = ResolveDynamicFields(module, state);
+        var failedSpells = keymap.GetCurrentFailedSpells();
+        var oneKeySpells = keymap.GetCurrentOneKeySpells();
+        var oneKeySpell = ModuleSpecialActions.GetOneKeySpell(state, oneKeySpells);
+        if (!string.IsNullOrWhiteSpace(oneKeySpell))
+        {
+            var hotkey = keymap.GetHotkey(0, oneKeySpell);
+            info["命中条件"] = $"一键辅助 == {state.GetInt("一键辅助")}";
+            info["动作技能"] = oneKeySpell;
+            info["动作按键"] = string.IsNullOrWhiteSpace(hotkey) ? "-" : hotkey;
+            info["动作单位"] = 0;
+            var step = string.IsNullOrWhiteSpace(hotkey)
+                ? $"{module.Name}: 未找到按键 {oneKeySpell}"
+                : $"{module.Name}: 施放 {oneKeySpell}";
+            return new LogicDecision(hotkey, step, info, module.Name);
+        }
 
         foreach (var rule in module.Rules.Where(rule => rule.Enabled))
         {
-            if (!ModuleConditionEvaluator.TryEvaluate(rule.Condition, state, out var conditionMatched, out var error))
+            if (!ModuleConditionEvaluator.TryEvaluate(rule.Condition, state, out var conditionMatched, out var error, failedSpells))
             {
                 info["条件错误"] = error;
                 info["规则条件"] = rule.Condition;
@@ -597,11 +612,21 @@ public static class ModuleLogic
             var actionSpell = rule.Spell;
             if (ModuleSpecialActions.IsFailedSpell(actionSpell))
             {
-                actionSpell = ModuleSpecialActions.GetFailedSpell(state);
+                actionSpell = ModuleSpecialActions.GetFailedSpell(state, failedSpells);
                 if (string.IsNullOrWhiteSpace(actionSpell))
                 {
                     continue;
                 }
+            }
+            else if (ModuleSpecialActions.IsOneKeySpell(actionSpell))
+            {
+                actionSpell = ModuleSpecialActions.GetOneKeySpell(state, oneKeySpells);
+                if (string.IsNullOrWhiteSpace(actionSpell))
+                {
+                    continue;
+                }
+
+                resolvedUnit = 0;
             }
 
             var hotkey = string.IsNullOrWhiteSpace(rule.Hotkey)
@@ -927,7 +952,12 @@ public static class ModuleConditionEvaluator
         @"^\s*(?<field>.+?)\s*(?<op>==|!=|>=|<=|>|<)\s*(?<value>.+?)\s*$",
         RegexOptions.Compiled);
 
-    public static bool TryEvaluate(string? expression, GameState state, out bool matched, out string? error)
+    public static bool TryEvaluate(
+        string? expression,
+        GameState state,
+        out bool matched,
+        out string? error,
+        IReadOnlyDictionary<int, string>? failedSpells = null)
     {
         matched = false;
         error = null;
@@ -943,7 +973,7 @@ public static class ModuleConditionEvaluator
             var allAndMatched = true;
             foreach (var andPart in Regex.Split(orPart, @"\s*&&\s*"))
             {
-                if (!TryEvaluateTerm(andPart, state, out var termMatched, out error))
+                if (!TryEvaluateTerm(andPart, state, out var termMatched, out error, failedSpells))
                 {
                     return false;
                 }
@@ -981,7 +1011,12 @@ public static class ModuleConditionEvaluator
     public static bool TryResolveDouble(GameState state, string fieldName, out double value)
         => TryToDouble(ResolveValue(state, fieldName), out value);
 
-    private static bool TryEvaluateTerm(string term, GameState state, out bool matched, out string? error)
+    private static bool TryEvaluateTerm(
+        string term,
+        GameState state,
+        out bool matched,
+        out string? error,
+        IReadOnlyDictionary<int, string>? failedSpells)
     {
         matched = false;
         error = null;
@@ -995,7 +1030,7 @@ public static class ModuleConditionEvaluator
         var inMatch = InRegex.Match(trimmed);
         if (inMatch.Success)
         {
-            var inLeft = ResolveValue(state, inMatch.Groups["field"].Value.Trim());
+            var inLeft = ResolveValue(state, inMatch.Groups["field"].Value.Trim(), failedSpells);
             var inOp = NormalizeOperator(inMatch.Groups["op"].Value);
             var values = ParseListLiterals(inMatch.Groups["value"].Value);
             return TryCompareIn(inLeft, inOp, values, out matched, out error);
@@ -1006,18 +1041,21 @@ public static class ModuleConditionEvaluator
         {
             var invert = trimmed.StartsWith('!');
             var fieldName = invert ? trimmed[1..].Trim() : trimmed;
-            var value = ResolveValue(state, fieldName);
+            var value = ResolveValue(state, fieldName, failedSpells);
             matched = invert ? !IsTruthy(value) : IsTruthy(value);
             return true;
         }
 
-        var left = ResolveValue(state, comparison.Groups["field"].Value.Trim());
+        var left = ResolveValue(state, comparison.Groups["field"].Value.Trim(), failedSpells);
         var op = comparison.Groups["op"].Value;
         var right = ParseLiteral(comparison.Groups["value"].Value.Trim());
         return TryCompare(left, op, right, out matched, out error);
     }
 
-    private static object? ResolveValue(GameState state, string fieldName)
+    private static object? ResolveValue(
+        GameState state,
+        string fieldName,
+        IReadOnlyDictionary<int, string>? failedSpells = null)
     {
         var key = fieldName.Trim();
         if (key.StartsWith("state.", StringComparison.OrdinalIgnoreCase))
@@ -1037,7 +1075,7 @@ public static class ModuleConditionEvaluator
 
         if (ModuleSpecialActions.IsFailedSpell(key))
         {
-            return ModuleSpecialActions.GetFailedSpell(state);
+            return ModuleSpecialActions.GetFailedSpell(state, failedSpells);
         }
 
         if (key.StartsWith("group.", StringComparison.OrdinalIgnoreCase))

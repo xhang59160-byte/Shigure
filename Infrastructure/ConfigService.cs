@@ -81,6 +81,34 @@ public sealed class ConfigService
         return string.IsNullOrWhiteSpace(value) ? "keymap.json" : value;
     }
 
+    public IReadOnlyDictionary<int, string> GetFailedSpells(int? classId)
+        => GetClassSpellMap(classId, ModuleSpecialActions.FailedSpell);
+
+    public IReadOnlyDictionary<int, string> GetOneKeySpells(int? classId)
+        => GetClassSpellMap(classId, ModuleSpecialActions.OneKeySpell);
+
+    private IReadOnlyDictionary<int, string> GetClassSpellMap(int? classId, string configKey)
+    {
+        if (classId is null
+            || GetObject(classId.Value.ToString()) is not { } classObj
+            || JsonHelpers.Get(classObj, configKey) is not JsonObject spellMap)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var result = new Dictionary<int, string>();
+        foreach (var (idText, node) in spellMap)
+        {
+            var spell = JsonHelpers.GetString(node);
+            if (int.TryParse(idText, out var id) && !string.IsNullOrWhiteSpace(spell))
+            {
+                result[id] = spell.Trim();
+            }
+        }
+
+        return result;
+    }
+
     private static void CopyInto(JsonObject target, JsonObject source)
     {
         foreach (var (key, value) in source)
