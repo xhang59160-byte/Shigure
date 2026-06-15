@@ -69,6 +69,8 @@ public sealed class UnitEditorForm : Form
     private readonly ComboBox _selectorBox = new();
     private readonly ComboBox _lowestHealthAuraFilterBox = new();
     private readonly FlowLayoutPanel _paramPanel = new();
+    private readonly Label _previewLabel = new();
+    private readonly ToolTip _toolTip = new();
 
     private readonly NumericUpDown _thresholdBox = new();
     private readonly ComboBox _thresholdModeBox = new();
@@ -116,13 +118,20 @@ public sealed class UnitEditorForm : Form
         UiTheme.ApplyDarkTitleBar(this);
     }
 
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _nameBox.Focus();
+        _nameBox.SelectAll();
+    }
+
     private void InitializeComponent()
     {
         Text = "编辑单位";
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
         BackColor = UiTheme.Background;
         ForeColor = UiTheme.Text;
-        ClientSize = new Size(RowWidth + 36, 500);
+        ClientSize = new Size(RowWidth + 36, 534);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -135,11 +144,12 @@ public sealed class UnitEditorForm : Form
             BackColor = UiTheme.Background,
             Padding = new Padding(14, 12, 14, 12),
             ColumnCount = 1,
-            RowCount = 4
+            RowCount = 5
         };
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
         Controls.Add(root);
 
@@ -175,7 +185,14 @@ public sealed class UnitEditorForm : Form
         BuildParamRows();
         root.Controls.Add(_paramPanel, 0, 2);
 
-        root.Controls.Add(BuildActionRow(), 0, 3);
+        _previewLabel.Dock = DockStyle.Fill;
+        _previewLabel.ForeColor = UiTheme.Muted;
+        _previewLabel.TextAlign = ContentAlignment.MiddleLeft;
+        _previewLabel.AutoEllipsis = true;
+        _previewLabel.Margin = new Padding(2, 2, 2, 0);
+        root.Controls.Add(_previewLabel, 0, 3);
+
+        root.Controls.Add(BuildActionRow(), 0, 4);
 
         PopulateSelectors();
     }
@@ -253,12 +270,30 @@ public sealed class UnitEditorForm : Form
         _dispelTypeBox.Items.AddRange(DispelTypeOptions.Cast<object>().ToArray());
         _dispelTypeBox.SelectedIndex = 0;
 
+        // 参数值变化刷新底部实时预览(类别/选择器/阈值类型/光环筛选经 UpdateParamVisibility 间接刷新)。
+        _thresholdBox.ValueChanged += (_, _) => UpdatePreview();
+        _thresholdFieldBox.SelectedIndexChanged += (_, _) => UpdatePreview();
+        _roleBox.SelectedIndexChanged += (_, _) => UpdatePreview();
+        _reverseBox.CheckedChanged += (_, _) => UpdatePreview();
+        _auraBox.SelectedIndexChanged += (_, _) => UpdatePreview();
+        _auraCountBox.ValueChanged += (_, _) => UpdatePreview();
+        _dispelTypeBox.SelectedIndexChanged += (_, _) => UpdatePreview();
+        // ItemCheck 在勾选状态提交前触发, 延后到提交后再读 CheckedItems。
+        // Seed 期间 CheckAuras 也会触发本事件, 此时窗口句柄尚未创建, 跳过(构造末尾会统一刷新)。
+        _aurasBox.ItemCheck += (_, _) =>
+        {
+            if (IsHandleCreated)
+            {
+                BeginInvoke(new Action(UpdatePreview));
+            }
+        };
+
         _thresholdModeRow = BuildLabeledRow("阈值类型", _thresholdModeBox);
         _thresholdRow = BuildLabeledRow("血量阈值 (<)", _thresholdBox);
         _thresholdFieldRow = BuildLabeledRow("动态阈值", _thresholdFieldBox);
         _lowestHealthAuraFilterRow = BuildLabeledRow("光环筛选", _lowestHealthAuraFilterBox);
         _roleRow = BuildLabeledRow("职责", _roleBox);
-        _reverseRow = BuildLabeledRow(string.Empty, _reverseBox);
+        _reverseRow = BuildLabeledRow("顺序", _reverseBox);
         _auraRow = BuildLabeledRow("光环", _auraBox);
         _aurasRow = BuildLabeledRow("光环 (可多选)", _aurasBox, 116);
         _auraCountRow = BuildLabeledRow("光环值", _auraCountBox);
@@ -292,6 +327,7 @@ public sealed class UnitEditorForm : Form
 
         row.Controls.Add(okButton);
         row.Controls.Add(cancelButton);
+        AcceptButton = okButton;
         CancelButton = cancelButton;
         return row;
     }
@@ -403,6 +439,75 @@ public sealed class UnitEditorForm : Form
         _aurasRow.Visible = auraMulti;
         _auraCountRow.Visible = auraCount;
         _dispelRow.Visible = dispel;
+        UpdatePreview();
+    }
+
+    private void UpdatePreview()
+    {
+        var text = BuildPreviewText();
+        _previewLabel.Text = string.IsNullOrEmpty(text) ? "预览: -" : $"预览: {text}";
+    }
+
+    // 用当前控件状态构造一个宽容的(不校验、不弹框)单位/数量, 复用 UnitSummary 渲染预览。
+    private string BuildPreviewText()
+    {
+        if (IsCountCategory)
+        {
+            var count = new ModuleCountField
+            {
+                Name = _nameBox.Text.Trim(),
+                Kind = (_selectorBox.SelectedItem as CountItem)?.Kind ?? CountKind.UnitsBelowHealth,
+                AuraName = SelectedAura()
+            };
+            ApplyPreviewThreshold(v => count.HealthThreshold = v, f => count.HealthThresholdField = f);
+            return UnitSummary.Describe(count);
+        }
+
+        var unit = new ModuleUnit
+        {
+            Name = _nameBox.Text.Trim(),
+            Kind = ResolveSelectedUnitKind(),
+            Role = SelectedRole(),
+            Reverse = _reverseBox.Checked,
+            AuraCount = (int)_auraCountBox.Value,
+            DispelType = SelectedDispelType()
+        };
+        unit.AuraNames = unit.Kind == UnitSelectorKind.LowestHealthWithAnyAura
+            ? CheckedAuras()
+            : SingleAuraList();
+        ApplyPreviewThreshold(v => unit.HealthThreshold = v, f => unit.HealthThresholdField = f);
+        return UnitSummary.Describe(unit);
+    }
+
+    // "生命值最低" 的具体子类型取决于光环筛选下拉, 与 OnConfirm 的分支保持一致。
+    private UnitSelectorKind ResolveSelectedUnitKind()
+    {
+        var kind = (_selectorBox.SelectedItem as SelectorItem)?.Kind ?? UnitSelectorKind.LowestHealth;
+        if (kind != UnitSelectorKind.LowestHealth)
+        {
+            return kind;
+        }
+
+        return SelectedLowestHealthAuraFilter() switch
+        {
+            LowestHealthAuraFilterKind.WithAnyAura => UnitSelectorKind.LowestHealthWithAnyAura,
+            LowestHealthAuraFilterKind.WithoutAura => UnitSelectorKind.LowestHealthWithoutAura,
+            LowestHealthAuraFilterKind.WithAura => UnitSelectorKind.LowestHealthWithAura,
+            LowestHealthAuraFilterKind.WithAuraCount => UnitSelectorKind.LowestHealthWithAuraCount,
+            _ => UnitSelectorKind.LowestHealth
+        };
+    }
+
+    private void ApplyPreviewThreshold(Action<int?> setFixed, Action<string?> setField)
+    {
+        if (IsDynamicThresholdMode())
+        {
+            setField(_thresholdFieldBox.SelectedItem?.ToString()?.Trim());
+        }
+        else
+        {
+            setFixed((int)_thresholdBox.Value);
+        }
     }
 
     private void Seed(ModuleUnit? unit, ModuleCountField? count)
@@ -966,6 +1071,8 @@ public sealed class UnitEditorForm : Form
         _healthNameLabel.AutoEllipsis = true;
         StyleTextBox(_healthNameBox);
         _healthNameBox.Bounds = new Rectangle(466, 5, RowWidth - 466, 28);
+        _toolTip.SetToolTip(_healthNameBox, "可选：把该单位生命值暴露为同名数值条件字段（如 最低血量 < 50）");
+        _toolTip.SetToolTip(_healthNameLabel, "可选：把该单位生命值暴露为同名数值条件字段（如 最低血量 < 50）");
 
         panel.Controls.Add(_nameBox);
         panel.Controls.Add(nameLabel);

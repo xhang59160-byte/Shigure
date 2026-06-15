@@ -22,6 +22,10 @@ public sealed class ModuleEditorControl : UserControl
     private readonly DataGridViewComboBoxColumn _adjustmentFieldColumn = new();
     private readonly ListView _unitsList = new();
     private readonly Label _pathLabel = new();
+    private readonly Label _unitsEmptyHint = new();
+    private readonly Label _editorEmptyHint = new();
+    private Button _saveButton = null!;
+    private Button _deleteButton = null!;
     private readonly ToolTip _rulesGridToolTip = new()
     {
         InitialDelay = 300,
@@ -38,6 +42,9 @@ public sealed class ModuleEditorControl : UserControl
     // 程序化恢复列宽时置真, 避免 ColumnWidthChanged 把默认值回写覆盖用户保存的宽度。
     private bool _suppressColumnSave;
     private bool _suppressUnitsColumnResize;
+    // 规则行拖拽重排: 拖动起始行, 以及拖动中的插入指示位置(显示一条强调线)。
+    private int _dragSourceRow = -1;
+    private int _dragIndicatorRow = -1;
     private static readonly PartyTypeOption[] PartyTypeOptions =
     [
         new("任意 (*)", null),
@@ -204,6 +211,15 @@ public sealed class ModuleEditorControl : UserControl
             contentHost.Controls.Add(page);
         }
 
+        _editorEmptyHint.Text = "请在左侧选择模块, 或点击「新建」创建";
+        _editorEmptyHint.Dock = DockStyle.Fill;
+        _editorEmptyHint.TextAlign = ContentAlignment.MiddleCenter;
+        _editorEmptyHint.ForeColor = UiTheme.Muted;
+        _editorEmptyHint.BackColor = UiTheme.SurfaceRaised;
+        _editorEmptyHint.Visible = false;
+        contentHost.Controls.Add(_editorEmptyHint);
+        _editorEmptyHint.BringToFront();
+
         var labels = new Label[3];
         var selectedIndex = -1;
 
@@ -269,6 +285,8 @@ public sealed class ModuleEditorControl : UserControl
                 using var accent = new SolidBrush(UiTheme.Accent);
                 e.Graphics.FillRectangle(accent, 8, label.Height - 3, Math.Max(0, label.Width - 16), 2);
             };
+            // 标签随窗口/侧栏宽度变化时重绘, 否则选中下划线会停留在旧宽度。
+            label.SizeChanged += (_, _) => label.Invalidate();
 
             labels[i] = label;
             tabBar.Controls.Add(label, i, 0);
@@ -399,6 +417,7 @@ public sealed class ModuleEditorControl : UserControl
         _unitsList.MultiSelect = false;
         UiTheme.StyleListView(_unitsList, Font);
         _unitsList.DoubleClick += (_, _) => EditSelectedUnit();
+        _unitsList.KeyDown += OnUnitsListKeyDown;
         _unitsList.Resize += (_, _) => StretchUnitsSummaryColumn();
         _unitsList.HandleCreated += (_, _) => StretchUnitsSummaryColumn();
         _unitsList.ColumnWidthChanged += (_, _) =>
@@ -408,7 +427,20 @@ public sealed class ModuleEditorControl : UserControl
                 StretchUnitsSummaryColumn();
             }
         };
-        panel.Controls.Add(_unitsList, 0, contentRow);
+
+        _unitsEmptyHint.Text = "暂无动态单位 / 数量\n点击右侧「添加」创建";
+        _unitsEmptyHint.Dock = DockStyle.Fill;
+        _unitsEmptyHint.TextAlign = ContentAlignment.MiddleCenter;
+        _unitsEmptyHint.ForeColor = UiTheme.Muted;
+        _unitsEmptyHint.BackColor = UiTheme.Surface;
+        _unitsEmptyHint.Visible = false;
+
+        // 列表与空状态提示叠放在同一宿主里, 列表为空时显示提示。
+        var listHost = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.Surface, Margin = new Padding(0) };
+        listHost.Controls.Add(_unitsEmptyHint);
+        listHost.Controls.Add(_unitsList);
+        _unitsEmptyHint.BringToFront();
+        panel.Controls.Add(listHost, 0, contentRow);
 
         var buttons = new FlowLayoutPanel
         {
@@ -515,7 +547,7 @@ public sealed class ModuleEditorControl : UserControl
     {
         UiTheme.StyleDataGridView(_adjustmentsGrid);
         _adjustmentsGrid.AllowUserToAddRows = true;
-        _adjustmentsGrid.AllowUserToDeleteRows = true;
+        _adjustmentsGrid.AllowUserToDeleteRows = false;
         _adjustmentsGrid.AllowUserToResizeColumns = true;
         _adjustmentsGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
 
@@ -584,7 +616,7 @@ public sealed class ModuleEditorControl : UserControl
     {
         UiTheme.StyleDataGridView(_formulaAdjustmentsGrid);
         _formulaAdjustmentsGrid.AllowUserToAddRows = true;
-        _formulaAdjustmentsGrid.AllowUserToDeleteRows = true;
+        _formulaAdjustmentsGrid.AllowUserToDeleteRows = false;
         _formulaAdjustmentsGrid.AllowUserToResizeColumns = true;
         _formulaAdjustmentsGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
 
@@ -648,7 +680,7 @@ public sealed class ModuleEditorControl : UserControl
     {
         UiTheme.StyleDataGridView(_rulesGrid);
         _rulesGrid.AllowUserToAddRows = true;
-        _rulesGrid.AllowUserToDeleteRows = true;
+        _rulesGrid.AllowUserToDeleteRows = false;
         _rulesGrid.AllowUserToResizeColumns = true;
         _rulesGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
         _rulesGrid.ShowCellToolTips = false;
@@ -678,6 +710,7 @@ public sealed class ModuleEditorControl : UserControl
             Name = "Condition",
             HeaderText = "条件 (点击编辑)",
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            MinimumWidth = 220,
             ReadOnly = true
         });
         AddRuleIconColumn("MoveUp", "▲", "上移");
@@ -685,11 +718,33 @@ public sealed class ModuleEditorControl : UserControl
         AddRuleIconColumn("Copy", "⧉", "复制到下一行");
         AddRuleIconColumn("InsertBlank", "+", "在下一行添加空白条件");
         AddRuleIconColumn("Delete", "×", "删除", UiTheme.Danger);
+
+        // 拖拽手柄列: 加在集合末尾(保持 Rows.Add 的位置参数仍对应 启用/技能/目标/条件),
+        // 用 DisplayIndex=0 显示到"启用"前面。自绘六点抓手, 按住拖动可调整该条逻辑顺序。
+        _rulesGrid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "Drag",
+            HeaderText = string.Empty,
+            Width = 30,
+            MinimumWidth = 30,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            Resizable = DataGridViewTriState.False,
+            ReadOnly = true
+        });
+        _rulesGrid.Columns["Drag"]!.DisplayIndex = 0;
+
+        _rulesGrid.AllowDrop = true;
         _rulesGrid.CellClick += OnRulesGridCellClick;
         _rulesGrid.CellPainting += OnRulesGridCellPainting;
         _rulesGrid.CellMouseEnter += OnRulesGridCellMouseEnter;
         _rulesGrid.CellMouseLeave += OnRulesGridCellMouseLeave;
         _rulesGrid.MouseLeave += (_, _) => _rulesGridToolTip.Hide(_rulesGrid);
+        _rulesGrid.MouseDown += OnRulesGridMouseDown;
+        _rulesGrid.MouseMove += OnRulesGridMouseMove;
+        _rulesGrid.DragOver += OnRulesGridDragOver;
+        _rulesGrid.DragDrop += OnRulesGridDragDrop;
+        _rulesGrid.DragLeave += (_, _) => ClearDragIndicator();
+        _rulesGrid.Paint += OnRulesGridPaint;
         _rulesGrid.DataError += (_, e) => e.ThrowException = false;
         _rulesGrid.ColumnWidthChanged += OnColumnWidthChanged;
         _rulesGrid.CellValueChanged += OnRulesGridCellValueChanged;
@@ -1108,15 +1163,18 @@ public sealed class ModuleEditorControl : UserControl
         foreach (var unit in _units)
         {
             var name = string.IsNullOrWhiteSpace(unit.HealthName) ? unit.Name : $"{unit.Name} / {unit.HealthName}";
-            _unitsList.Items.Add(new ListViewItem([name, "单位", DescribeUnit(unit)]));
+            var summary = UnitSummary.Describe(unit);
+            _unitsList.Items.Add(new ListViewItem([name, "单位", summary]) { ToolTipText = $"{name}\n{summary}" });
         }
 
         foreach (var count in _counts)
         {
-            _unitsList.Items.Add(new ListViewItem([count.Name, "数量", DescribeCount(count)]));
+            var summary = UnitSummary.Describe(count);
+            _unitsList.Items.Add(new ListViewItem([count.Name, "数量", summary]) { ToolTipText = $"{count.Name}\n{summary}" });
         }
 
         _unitsList.EndUpdate();
+        _unitsEmptyHint.Visible = _unitsList.Items.Count == 0;
     }
 
     // 单位/数量增删改后, 刷新各规则行"目标"下拉以反映最新的动态单位名。
@@ -1190,44 +1248,19 @@ public sealed class ModuleEditorControl : UserControl
         return taken;
     }
 
-    private static string DescribeUnit(ModuleUnit unit)
+    private void OnUnitsListKeyDown(object? sender, KeyEventArgs e)
     {
-        var threshold = DescribeThreshold(unit.HealthThreshold, unit.HealthThresholdField);
-        var aura = unit.AuraNames is { Count: > 0 } ? unit.AuraNames[0] : "?";
-        var auras = unit.AuraNames is { Count: > 0 } ? string.Join("/", unit.AuraNames) : "?";
-        var dir = unit.Reverse ? "逆序" : "正序";
-        return unit.Kind switch
+        if (e.KeyCode == Keys.Enter)
         {
-            UnitSelectorKind.LowestHealth => $"血量最低 (<{threshold})",
-            UnitSelectorKind.LowestHealthWithAnyAura => $"带任一[{auras}]且血最低 (<{threshold})",
-            UnitSelectorKind.LowestHealthWithoutAura => $"不带[{aura}]且血最低 (<{threshold})",
-            UnitSelectorKind.LowestHealthWithAura => $"带[{aura}]且血最低 (<{threshold})",
-            UnitSelectorKind.LowestHealthWithAuraCount => $"[{aura}]={unit.AuraCount}且血最低 (<{threshold})",
-            UnitSelectorKind.UnitWithRole => $"职责={unit.Role} {dir}首个",
-            UnitSelectorKind.UnitWithRoleWithoutAura => $"职责={unit.Role}且不带[{aura}] {dir}",
-            UnitSelectorKind.UnitWithAura => $"带[{aura}] 持续最久",
-            UnitSelectorKind.UnitWithDispelType => $"驱散类型={unit.DispelType}",
-            _ => unit.Kind.ToString()
-        };
-    }
-
-    private static string DescribeCount(ModuleCountField count)
-    {
-        var threshold = DescribeThreshold(count.HealthThreshold, count.HealthThresholdField);
-        return count.Kind switch
+            EditSelectedUnit();
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+        else if (e.KeyCode == Keys.Delete)
         {
-            CountKind.UnitsBelowHealth => $"血量<{threshold} 的人数",
-            CountKind.UnitsWithoutAuraBelowHealth => $"不带[{count.AuraName}]且血<{threshold} 的人数",
-            CountKind.UnitsWithAura => $"带[{count.AuraName}] 的人数",
-            _ => count.Kind.ToString()
-        };
-    }
-
-    private static string DescribeThreshold(int? fixedValue, string? field)
-    {
-        return string.IsNullOrWhiteSpace(field)
-            ? (fixedValue ?? 100).ToString()
-            : $"动态:{field.Trim()}";
+            DeleteSelectedUnit();
+            e.Handled = true;
+        }
     }
 
     private enum UnitRowKind
@@ -1339,6 +1372,12 @@ public sealed class ModuleEditorControl : UserControl
         }
 
         var columnName = _rulesGrid.Columns[e.ColumnIndex].Name;
+        if (columnName == "Drag")
+        {
+            PaintRuleDragHandle(e);
+            return;
+        }
+
         if (columnName is not ("MoveUp" or "MoveDown" or "Copy" or "InsertBlank" or "Delete"))
         {
             return;
@@ -1370,9 +1409,20 @@ public sealed class ModuleEditorControl : UserControl
         }
 
         var columnName = _rulesGrid.Columns[e.ColumnIndex].Name;
-        var text = GetRuleIconToolTip(columnName, e.RowIndex);
+
+        // 条件列(点击编辑) → 手型; 拖拽手柄列 → 移动光标; 其它 → 默认。
+        var isExisting = !_rulesGrid.Rows[e.RowIndex].IsNewRow;
+        _rulesGrid.Cursor = columnName switch
+        {
+            "Condition" when isExisting => Cursors.Hand,
+            "Drag" when isExisting => Cursors.SizeAll,
+            _ => Cursors.Default
+        };
+
+        var text = GetRuleCellToolTip(columnName, e.RowIndex, e.ColumnIndex);
         if (string.IsNullOrEmpty(text))
         {
+            _rulesGridToolTip.Hide(_rulesGrid);
             return;
         }
 
@@ -1382,7 +1432,51 @@ public sealed class ModuleEditorControl : UserControl
 
     private void OnRulesGridCellMouseLeave(object? sender, DataGridViewCellEventArgs e)
     {
+        _rulesGrid.Cursor = Cursors.Default;
         _rulesGridToolTip.Hide(_rulesGrid);
+    }
+
+    // 图标列沿用原提示; 条件/技能/目标三列在文本被列宽截断或可点击时给出悬停提示。
+    private string GetRuleCellToolTip(string columnName, int rowIndex, int columnIndex)
+    {
+        if (columnName is "MoveUp" or "MoveDown" or "Copy" or "InsertBlank" or "Delete")
+        {
+            return GetRuleIconToolTip(columnName, rowIndex);
+        }
+
+        if (rowIndex >= _rulesGrid.Rows.Count || _rulesGrid.Rows[rowIndex].IsNewRow)
+        {
+            return string.Empty;
+        }
+
+        if (columnName == "Drag")
+        {
+            return "拖动调整顺序";
+        }
+
+        if (columnName is not ("Condition" or "Spell" or "Unit"))
+        {
+            return string.Empty;
+        }
+
+        var text = CellText(_rulesGrid.Rows[rowIndex], columnName);
+        if (columnName == "Condition" && text.Length == 0)
+        {
+            return "点击编辑条件 (当前: 始终命中)";
+        }
+
+        return IsCellTextClipped(text, columnIndex) ? text : string.Empty;
+    }
+
+    private bool IsCellTextClipped(string text, int columnIndex)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        var available = _rulesGrid.Columns[columnIndex].Width - 12;
+        return TextRenderer.MeasureText(text, _rulesGrid.Font).Width > available;
     }
 
     private string GetRuleIconToolTip(string columnName, int rowIndex)
@@ -1449,6 +1543,31 @@ public sealed class ModuleEditorControl : UserControl
             e.CellBounds,
             color,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        e.Handled = true;
+    }
+
+    // 自绘 2×3 六点抓手, 不依赖字体里是否有 grip 字形; 新行不画。
+    private void PaintRuleDragHandle(DataGridViewCellPaintingEventArgs e)
+    {
+        e.Paint(e.CellBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.Border);
+        if (e.Graphics is null || e.RowIndex < 0 || _rulesGrid.Rows[e.RowIndex].IsNewRow)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var cx = e.CellBounds.Left + e.CellBounds.Width / 2;
+        var cy = e.CellBounds.Top + e.CellBounds.Height / 2;
+        var color = _rulesGrid.Rows[e.RowIndex].Selected ? UiTheme.Text : UiTheme.Muted;
+        using var brush = new SolidBrush(color);
+        foreach (var x in new[] { cx - 4, cx })
+        {
+            foreach (var y in new[] { cy - 7, cy - 1, cy + 5 })
+            {
+                e.Graphics.FillEllipse(brush, x, y, 2, 2);
+            }
+        }
+
         e.Handled = true;
     }
 
@@ -1544,6 +1663,10 @@ public sealed class ModuleEditorControl : UserControl
         comboBox.DropDownStyle = ComboBoxStyle.DropDown;
         comboBox.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
         comboBox.AutoCompleteSource = AutoCompleteSource.ListItems;
+        // 可输入下拉默认是系统白底, 与暗色表格冲突; 显式套用暗色。
+        comboBox.FlatStyle = FlatStyle.Flat;
+        comboBox.BackColor = UiTheme.Field;
+        comboBox.ForeColor = UiTheme.Text;
     }
 
     private void OnAdjustmentsGridCellValidating(object? sender, DataGridViewCellValidatingEventArgs e)
@@ -1680,7 +1803,7 @@ public sealed class ModuleEditorControl : UserControl
         _rulesGrid.Rows.Insert(insertIndex, 1);
         var inserted = _rulesGrid.Rows[insertIndex];
         WriteRuleRow(inserted, values);
-        _rulesGrid.CurrentCell = inserted.Cells["Condition"];
+        _rulesGrid.CurrentCell = inserted.Cells["Spell"];
         inserted.Selected = true;
         _rulesGrid.Invalidate();
     }
@@ -1703,8 +1826,158 @@ public sealed class ModuleEditorControl : UserControl
         var target = ReadRuleRow(_rulesGrid.Rows[targetIndex]);
         WriteRuleRow(_rulesGrid.Rows[rowIndex], target);
         WriteRuleRow(_rulesGrid.Rows[targetIndex], current);
-        _rulesGrid.CurrentCell = _rulesGrid.Rows[targetIndex].Cells["Condition"];
+        _rulesGrid.CurrentCell = _rulesGrid.Rows[targetIndex].Cells["Spell"];
         _rulesGrid.Rows[targetIndex].Selected = true;
+        _rulesGrid.Invalidate();
+    }
+
+    // 拖拽手柄按下: 记录起始行(仅限抓手列上的已有规则行)。
+    private void OnRulesGridMouseDown(object? sender, MouseEventArgs e)
+    {
+        _dragSourceRow = -1;
+        var hit = _rulesGrid.HitTest(e.X, e.Y);
+        if (hit.RowIndex >= 0
+            && hit.ColumnIndex >= 0
+            && _rulesGrid.Columns[hit.ColumnIndex].Name == "Drag"
+            && IsExistingRuleRow(hit.RowIndex))
+        {
+            _dragSourceRow = hit.RowIndex;
+        }
+    }
+
+    // 在抓手上按住左键移动即开始拖拽(DoDragDrop 自带模态循环, 结束后复位)。
+    private void OnRulesGridMouseMove(object? sender, MouseEventArgs e)
+    {
+        if (_dragSourceRow < 0 || (e.Button & MouseButtons.Left) == 0)
+        {
+            return;
+        }
+
+        var source = _dragSourceRow;
+        _rulesGrid.DoDragDrop(source, DragDropEffects.Move);
+        _dragSourceRow = -1;
+        ClearDragIndicator();
+    }
+
+    private void OnRulesGridDragOver(object? sender, DragEventArgs e)
+    {
+        if (e.Data?.GetDataPresent(typeof(int)) != true)
+        {
+            e.Effect = DragDropEffects.None;
+            return;
+        }
+
+        e.Effect = DragDropEffects.Move;
+        SetDragIndicator(ResolveDropSlot(e));
+    }
+
+    private void OnRulesGridDragDrop(object? sender, DragEventArgs e)
+    {
+        ClearDragIndicator();
+        if (e.Data?.GetData(typeof(int)) is int source)
+        {
+            MoveRuleByDrag(source, ResolveDropSlot(e));
+        }
+    }
+
+    private void OnRulesGridPaint(object? sender, PaintEventArgs e)
+    {
+        if (_dragIndicatorRow < 0)
+        {
+            return;
+        }
+
+        var last = LastRuleRowIndex();
+        // 指示位置可能等于"末尾"(= last+1): 画在最后一行的下边缘, 否则画在该行上边缘。
+        var atEnd = _dragIndicatorRow > last;
+        var rect = _rulesGrid.GetRowDisplayRectangle(atEnd ? last : _dragIndicatorRow, false);
+        if (rect.Height == 0)
+        {
+            return;
+        }
+
+        var y = atEnd ? rect.Bottom - 1 : rect.Top;
+        using var pen = new Pen(UiTheme.Accent, 2);
+        e.Graphics.DrawLine(pen, rect.Left, y, rect.Right, y);
+    }
+
+    // 把拖放点解析为"插入到第几行之前"的槽位(0..last+1), 行下半区视为插入到其后。
+    private int ResolveDropSlot(DragEventArgs e)
+    {
+        var pt = _rulesGrid.PointToClient(new Point(e.X, e.Y));
+        var hit = _rulesGrid.HitTest(pt.X, pt.Y);
+        var last = LastRuleRowIndex();
+        if (hit.RowIndex < 0 || hit.RowIndex > last)
+        {
+            return last + 1;
+        }
+
+        var rect = _rulesGrid.GetRowDisplayRectangle(hit.RowIndex, false);
+        var lowerHalf = pt.Y > rect.Top + rect.Height / 2;
+        return lowerHalf ? hit.RowIndex + 1 : hit.RowIndex;
+    }
+
+    private void SetDragIndicator(int slot)
+    {
+        if (_dragIndicatorRow == slot)
+        {
+            return;
+        }
+
+        _dragIndicatorRow = slot;
+        _rulesGrid.Invalidate();
+    }
+
+    private void ClearDragIndicator()
+    {
+        if (_dragIndicatorRow < 0)
+        {
+            return;
+        }
+
+        _dragIndicatorRow = -1;
+        _rulesGrid.Invalidate();
+    }
+
+    // 把第 source 行移动到插入槽位 slot 之前, 通过读出全部规则行 → 重排 → 写回(行数不变)。
+    private void MoveRuleByDrag(int source, int slot)
+    {
+        _rulesGrid.EndEdit();
+        if (!IsExistingRuleRow(source))
+        {
+            return;
+        }
+
+        var count = LastRuleRowIndex() + 1;
+        if (count <= 1)
+        {
+            return;
+        }
+
+        slot = Math.Clamp(slot, 0, count);
+        // 移除 source 后, 其后的插入位置整体前移一位。
+        var insertAt = Math.Clamp(source < slot ? slot - 1 : slot, 0, count - 1);
+        if (insertAt == source)
+        {
+            return;
+        }
+
+        var rows = new List<RuleRowValues>(count);
+        for (var i = 0; i < count; i++)
+        {
+            rows.Add(ReadRuleRow(_rulesGrid.Rows[i]));
+        }
+
+        var moved = rows[source];
+        rows.RemoveAt(source);
+        rows.Insert(insertAt, moved);
+        for (var i = 0; i < count; i++)
+        {
+            WriteRuleRow(_rulesGrid.Rows[i], rows[i]);
+        }
+
+        _rulesGrid.CurrentCell = _rulesGrid.Rows[insertAt].Cells["Spell"];
+        _rulesGrid.Rows[insertAt].Selected = true;
         _rulesGrid.Invalidate();
     }
 
@@ -1847,16 +2120,16 @@ public sealed class ModuleEditorControl : UserControl
             Padding = new Padding(0, 6, 0, 6)
         };
 
-        var saveButton = UiTheme.CreateButton("保存", UiTheme.Accent, Color.Black);
-        saveButton.Margin = new Padding(8, 0, 0, 0);
-        saveButton.Click += (_, _) => SaveSelectedModule();
+        _saveButton = UiTheme.CreateButton("保存", UiTheme.Accent, Color.Black);
+        _saveButton.Margin = new Padding(8, 0, 0, 0);
+        _saveButton.Click += (_, _) => SaveSelectedModule();
 
-        var deleteButton = UiTheme.CreateButton("删除", UiTheme.Field, UiTheme.Danger);
-        deleteButton.Margin = new Padding(8, 0, 0, 0);
-        deleteButton.Click += (_, _) => DeleteSelectedModule();
+        _deleteButton = UiTheme.CreateButton("删除", UiTheme.Field, UiTheme.Danger);
+        _deleteButton.Margin = new Padding(8, 0, 0, 0);
+        _deleteButton.Click += (_, _) => DeleteSelectedModule();
 
-        buttons.Controls.Add(saveButton);
-        buttons.Controls.Add(deleteButton);
+        buttons.Controls.Add(_saveButton);
+        buttons.Controls.Add(_deleteButton);
         row.Controls.Add(hint);
         row.Controls.Add(buttons);
         return row;
@@ -1897,6 +2170,7 @@ public sealed class ModuleEditorControl : UserControl
     private void FillEditor(ModuleDefinition module)
     {
         _nameBox.Text = module.Name;
+        SetEditorEnabled(hasModule: true);
         // 先填充动态单位/数量, 后续目标下拉与条件字段都依赖它们。
         _units.Clear();
         _units.AddRange(module.Units.Select(unit => unit.Clone()));
@@ -1965,6 +2239,19 @@ public sealed class ModuleEditorControl : UserControl
         _formulaAdjustmentsGrid.Rows.Clear();
         RefreshAdjustmentFieldColumn();
         _rulesGrid.Rows.Clear();
+        SetEditorEnabled(hasModule: false);
+    }
+
+    // 无选中模块时禁用保存/删除(否则点了静默无反应), 并在编辑区显示引导提示。
+    private void SetEditorEnabled(bool hasModule)
+    {
+        _saveButton.Enabled = hasModule;
+        _deleteButton.Enabled = hasModule;
+        _editorEmptyHint.Visible = !hasModule;
+        if (!hasModule)
+        {
+            _editorEmptyHint.BringToFront();
+        }
     }
 
     private void AddModule()

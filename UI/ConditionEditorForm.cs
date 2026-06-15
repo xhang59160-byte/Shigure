@@ -158,8 +158,10 @@ public sealed class ConditionEditorForm : Form
     ];
 
     private readonly IReadOnlyList<ConditionField> _fields;
+    private readonly string _originalCondition;
     private readonly FlowLayoutPanel _rowsPanel = new();
     private readonly Label _previewLabel = new();
+    private readonly ToolTip _previewToolTip = new();
     private readonly List<ConditionRow> _rows = new();
 
     public string ConditionText { get; private set; } = string.Empty;
@@ -167,11 +169,18 @@ public sealed class ConditionEditorForm : Form
     public ConditionEditorForm(IReadOnlyList<ConditionField> fields, string? condition)
     {
         _fields = fields;
+        _originalCondition = condition ?? string.Empty;
         InitializeComponent();
 
         foreach (var term in ConditionExpression.Parse(condition))
         {
             AddRow(term);
+        }
+
+        // 空条件直接落在一条可填行上, 无需先去找"添加条件"。
+        if (_rows.Count == 0)
+        {
+            AddRow(null);
         }
 
         RefreshConnectors();
@@ -190,12 +199,15 @@ public sealed class ConditionEditorForm : Form
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
         BackColor = UiTheme.Background;
         ForeColor = UiTheme.Text;
-        ClientSize = new Size(RowTotalWidth + 50, 460);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        // 加一个滚动条宽度, 避免行数多时垂直滚动条盖住每行的 ✕ 删除按钮。
+        ClientSize = new Size(RowTotalWidth + 50 + SystemInformation.VerticalScrollBarWidth, 460);
+        FormBorderStyle = FormBorderStyle.Sizable;
         MaximizeBox = false;
         MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
+        // 允许纵向放大以一次看到更多条件行; 不小于初始尺寸。
+        MinimumSize = Size;
 
         var root = new TableLayoutPanel
         {
@@ -286,9 +298,11 @@ public sealed class ConditionEditorForm : Form
         addButton.Margin = new Padding(0, 4, 0, 0);
         addButton.Click += (_, _) =>
         {
-            AddRow(null);
+            var row = AddRow(null);
             RefreshConnectors();
             UpdatePreview();
+            _rowsPanel.ScrollControlIntoView(row.Panel);
+            row.CategoryBox.Focus();
         };
         leftButtons.Controls.Add(addButton);
         row.Controls.Add(leftButtons, 0, 0);
@@ -306,11 +320,7 @@ public sealed class ConditionEditorForm : Form
         okButton.Width = 72;
         okButton.Height = 30;
         okButton.Margin = new Padding(6, 4, 0, 0);
-        okButton.Click += (_, _) =>
-        {
-            ConditionText = ConditionExpression.Build(CollectTerms());
-            DialogResult = DialogResult.OK;
-        };
+        okButton.Click += (_, _) => TryConfirm();
 
         var cancelButton = UiTheme.CreateButton("取消", UiTheme.Field, UiTheme.Text);
         cancelButton.Width = 72;
@@ -322,11 +332,51 @@ public sealed class ConditionEditorForm : Form
         rightButtons.Controls.Add(cancelButton);
         row.Controls.Add(rightButtons, 1, 0);
 
+        AcceptButton = okButton;
         CancelButton = cancelButton;
         return row;
     }
 
-    private void AddRow(ConditionTerm? term)
+    // 提交前对两类静默丢失给出确认: 不完整行被忽略、或结果为空会把条件清成"始终命中"。
+    private void TryConfirm()
+    {
+        var incomplete = _rows.Count(IsRowIncomplete);
+        if (incomplete > 0
+            && MessageBox.Show(
+                $"有 {incomplete} 行不完整(字段或值为空), 将被忽略。继续？",
+                "Shigure",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Warning) != DialogResult.OK)
+        {
+            return;
+        }
+
+        var text = ConditionExpression.Build(CollectTerms());
+        // 仅当原本有条件、现在变空时才提醒(避免把已有规则误清成"始终命中")。
+        if (text.Length == 0
+            && !string.IsNullOrWhiteSpace(_originalCondition)
+            && MessageBox.Show(
+                "当前条件为空, 将清除该规则的条件(始终命中)。继续？",
+                "Shigure",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Warning) != DialogResult.OK)
+        {
+            return;
+        }
+
+        ConditionText = text;
+        DialogResult = DialogResult.OK;
+    }
+
+    // 恰好字段与值一空一非空 → 不完整; 两者都空只是空行(静默忽略, 不算不完整)。
+    private static bool IsRowIncomplete(ConditionRow row)
+    {
+        var field = row.SelectedField?.Name.Trim() ?? string.Empty;
+        var value = ReadRowValue(row);
+        return (field.Length == 0) ^ (value.Length == 0);
+    }
+
+    private ConditionRow AddRow(ConditionTerm? term)
     {
         var panel = new TableLayoutPanel
         {
@@ -415,6 +465,7 @@ public sealed class ConditionEditorForm : Form
 
         _rows.Add(row);
         _rowsPanel.Controls.Add(panel);
+        return row;
     }
 
     private void RemoveRow(ConditionRow row)
@@ -659,6 +710,8 @@ public sealed class ConditionEditorForm : Form
     {
         var text = ConditionExpression.Build(CollectTerms());
         _previewLabel.Text = text.Length == 0 ? "预览: (无条件, 始终命中)" : $"预览: {text}";
+        // 单行预览会被省略号截断, 悬停看完整表达式。
+        _previewToolTip.SetToolTip(_previewLabel, text.Length == 0 ? string.Empty : text);
     }
 
     private static bool IsFalseText(string? value)
