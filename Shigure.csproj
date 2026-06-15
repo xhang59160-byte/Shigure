@@ -6,8 +6,9 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Shigure</AssemblyName>
+    <AssemblyName>Arasaka Shigure</AssemblyName>
     <RootNamespace>Shigure</RootNamespace>
+    <Company>Arasaka Corporation</Company>
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>

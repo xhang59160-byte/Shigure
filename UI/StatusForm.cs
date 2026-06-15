@@ -47,7 +47,7 @@ public sealed class StatusForm : Form
     {
         SuspendLayout();
 
-        Text = "Shigure - 设置";
+        Text = "设置";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(760, 560);
         Size = new Size(920, 640);
