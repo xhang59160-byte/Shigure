@@ -345,6 +345,10 @@
             "step": 22,
             "type": "int"
         },
+        "AOE开关": {
+            "step": 23,
+            "type": "int"
+        },
         "敌人人数": {
             "step": 29,
             "type": "int"

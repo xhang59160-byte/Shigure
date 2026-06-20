@@ -22,7 +22,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "战斗时间 == 0 || 目标类型 == 0 || 目标类型 >= 10",
+      "Condition": "战斗时间 == 0 || 目标类型 == 0 || 目标类型 >= 30",
       "Spell": "暂停",
       "Hotkey": "",
       "Step": ""
@@ -45,7 +45,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "生命值 < 30 && 神圣能量 >= 3 || 生命值 < 30 && 神圣意志 > 0",
+      "Condition": "生命值 < 50 && 神圣能量 >= 3 || 生命值 < 50 && auras.神圣意志 > 0",
       "Unit": 0,
       "Spell": "荣耀圣令",
       "Hotkey": "",
@@ -53,71 +53,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "spells.复仇之怒 == 0 && spells.处决宣判 == 0 && spells.灰烬觉醒 == 0 && 爆发开关 == 1",
-      "Unit": 0,
-      "Spell": "复仇之怒",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "复仇之怒 > 0 && spells.处决宣判 == 0",
-      "Unit": 0,
-      "Spell": "处决宣判",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "spells.复仇之怒 >= 20 && spells.复仇之怒 <= 30 && spells.灰烬觉醒 == 0 && 神圣能量 >= 2 && 神圣能量 <= 3 && 爆发开关 == 1",
-      "Unit": 0,
-      "Spell": "灰烬觉醒",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "spells.灰烬觉醒 == 0 && 处决宣判 > 0 && 神圣能量 >= 2 && 神圣能量 <= 3",
-      "Unit": 0,
-      "Spell": "灰烬觉醒",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "spells.灰烬觉醒 == 0 && 神圣能量 >= 2 && 神圣能量 <= 3 && spells.处决宣判 == 255 && 爆发开关 == 1",
-      "Unit": 0,
-      "Spell": "灰烬觉醒",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "处决宣判 > 0 && 圣光之锤 > 0 && 神圣能量 >= 3",
-      "Unit": 0,
-      "Spell": "灰烬觉醒",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "神圣能量 < 3 && spells.圣洁鸣钟 == 0 && spells.灰烬觉醒 >= 25",
-      "Unit": 0,
-      "Spell": "圣洁鸣钟",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "圣光之锤 > 0 && 神圣能量 >= 3 || 圣光之锤 > 0 && 神圣意志 > 0",
-      "Unit": 0,
-      "Spell": "灰烬觉醒",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "神圣能量 >= 3 && 敌人人数 >= 2 && 目标距离 <= 6 || 神圣意志 > 0 && 敌人人数 >= 2 && 目标距离 <= 6",
+      "Condition": "神圣能量 >= 4 && AOE开关 == 0 && 敌人人数 >= 2 && 目标距离 < 6",
       "Unit": 0,
       "Spell": "神圣风暴",
       "Hotkey": "",
@@ -125,7 +61,15 @@
     },
     {
       "Enabled": true,
-      "Condition": "神圣能量 >= 3 && 敌人人数 < 2 && 目标距离 < 10 || 神圣意志 > 0 && 敌人人数 < 2 && 目标距离 < 10",
+      "Condition": "auras.神圣意志 > 0 && AOE开关 == 0 && 敌人人数 >= 2 && 目标距离 < 6",
+      "Unit": 0,
+      "Spell": "神圣风暴",
+      "Hotkey": "",
+      "Step": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "神圣能量 >= 4 && 目标距离 < 20",
       "Unit": 0,
       "Spell": "最终审判",
       "Hotkey": "",
@@ -133,7 +77,15 @@
     },
     {
       "Enabled": true,
-      "Condition": "神圣能量 <= 3 && spells.公正之剑 == 0",
+      "Condition": "auras.神圣意志 > 0 && 目标距离 < 20",
+      "Unit": 0,
+      "Spell": "最终审判",
+      "Hotkey": "",
+      "Step": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "神圣能量 <= 3 && 目标距离 <= 20 && spells.公正之剑 == 0",
       "Unit": 0,
       "Spell": "公正之剑",
       "Hotkey": "",
@@ -141,7 +93,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "神圣能量 <= 4 && spells.审判 == 0",
+      "Condition": "神圣能量 <= 3 && 目标距离 <= 30 && spells.审判 == 0",
       "Unit": 0,
       "Spell": "审判",
       "Hotkey": "",
@@ -149,9 +101,17 @@
     },
     {
       "Enabled": true,
-      "Condition": "神圣能量 <= 4 && spells.公正之剑 == 0",
+      "Condition": "神圣能量 >= 3 && AOE开关 == 0 && 敌人人数 >= 2 && 目标距离 < 6",
       "Unit": 0,
-      "Spell": "公正之剑",
+      "Spell": "神圣风暴",
+      "Hotkey": "",
+      "Step": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "神圣能量 >= 3 && 目标距离 < 20",
+      "Unit": 0,
+      "Spell": "最终审判",
       "Hotkey": "",
       "Step": ""
     }
