@@ -1,0 +1,100 @@
+{
+  "Id": "增强萨旧逻辑-20260616000000000",
+  "Name": "增强萨旧逻辑",
+  "Enabled": true,
+  "Match": {
+    "ClassId": 7,
+    "SpecId": 2
+  },
+  "Units": [],
+  "Counts": [],
+  "ValueAdjustments": [],
+  "Rules": [
+    {
+      "Enabled": true,
+      "Condition": "引导 > 0 || 延迟 > 0",
+      "Spell": "暂停",
+      "Hotkey": "",
+      "Step": "增强-引导/延迟中: 暂停"
+    },
+    {
+      "Enabled": true,
+      "Condition": "插入法术 != \"\"",
+      "Unit": 0,
+      "Spell": "插入法术",
+      "Hotkey": "",
+      "Step": "增强-插入法术"
+    },
+    {
+      "Enabled": true,
+      "Condition": "溢流漩涡层数 >= 10 && 生命值 < 50",
+      "Unit": 0,
+      "Spell": "治疗之涌",
+      "Hotkey": "",
+      "Step": "增强-保命: 治疗之涌"
+    },
+    {
+      "Enabled": true,
+      "Condition": "战斗时间 == 0 || 目标类型 == 0 || 目标类型 >= 10",
+      "Spell": "暂停",
+      "Hotkey": "",
+      "Step": "增强-无有效目标: 暂停"
+    },
+    {
+      "Enabled": true,
+      "Condition": "auras.升腾 == 0 && auras.狂风怒号 == 2 && 漩涡武器层数 >= 8",
+      "Unit": 0,
+      "Spell": "狂风怒号",
+      "Hotkey": "",
+      "Step": "增强-狂风怒号: 狂风怒号"
+    },
+    {
+      "Enabled": true,
+      "Condition": "auras.升腾 == 0 && 漩涡武器层数 >= 8 && AOE开关 == 0 && 敌人人数 >= 2",
+      "Unit": 0,
+      "Spell": "闪电链",
+      "Hotkey": "",
+      "Step": "增强-8层漩涡: 闪电链"
+    },
+    {
+      "Enabled": true,
+      "Condition": "auras.升腾 == 0 && 漩涡武器层数 >= 8",
+      "Unit": 0,
+      "Spell": "闪电箭",
+      "Hotkey": "",
+      "Step": "增强-8层漩涡: 闪电箭"
+    },
+    {
+      "Enabled": true,
+      "Condition": "敌人人数 >= 2 && 目标距离 <= 5 && spells.毁灭闪电 == 0",
+      "Unit": 0,
+      "Spell": "毁灭闪电",
+      "Hotkey": "",
+      "Step": "增强-普通循环: 毁灭闪电"
+    },
+    {
+      "Enabled": true,
+      "Condition": "目标距离 <= 5 && spells.风暴打击 == 0",
+      "Unit": 0,
+      "Spell": "风暴打击",
+      "Hotkey": "",
+      "Step": "增强-普通循环: 风暴打击"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.流电炽焰 == 0",
+      "Unit": 0,
+      "Spell": "流电炽焰",
+      "Hotkey": "",
+      "Step": "增强-普通循环: 流电炽焰"
+    },
+    {
+      "Enabled": true,
+      "Condition": "目标距离 <= 5 && spells.熔岩猛击 == 0",
+      "Unit": 0,
+      "Spell": "熔岩猛击",
+      "Hotkey": "",
+      "Step": "增强-普通循环: 熔岩猛击"
+    }
+  ]
+}
