@@ -53,7 +53,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "神圣能量 >= 4 && AOE开关 == 0 && 敌人人数 >= 2 && 目标距离 < 6",
+      "Condition": "神圣能量 >= 4 && AOE开关 == 0 && 敌人人数 > 2 && 目标距离 < 6",
       "Unit": 0,
       "Spell": "神圣风暴",
       "Hotkey": "",
@@ -61,7 +61,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "auras.神圣意志 > 0 && AOE开关 == 0 && 敌人人数 >= 2 && 目标距离 < 6",
+      "Condition": "auras.神圣意志 > 0 && AOE开关 == 0 && 敌人人数 > 2 && 目标距离 < 6",
       "Unit": 0,
       "Spell": "神圣风暴",
       "Hotkey": "",
@@ -101,7 +101,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "神圣能量 >= 3 && AOE开关 == 0 && 敌人人数 >= 2 && 目标距离 < 6",
+      "Condition": "神圣能量 >= 3 && AOE开关 == 0 && 敌人人数 > 2 && 目标距离 < 6",
       "Unit": 0,
       "Spell": "神圣风暴",
       "Hotkey": "",
