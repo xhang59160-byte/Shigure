@@ -83,55 +83,19 @@
     {
       "Enabled": true,
       "Condition": "",
+      "Unit": 0,
       "Spell": "插入法术",
       "Hotkey": "",
       "Step": ""
     },
     {
       "Enabled": true,
-      "Condition": "战斗时间 == 0 || 目标类型 == 0 || 目标类型 >= 10",
+      "Condition": "战斗时间 == 0",
       "Spell": "暂停",
       "Hotkey": "",
       "Step": ""
     },
-    {
-      "Enabled": true,
-      "Condition": "auras.升腾 == 0 && auras.狂风怒号 == 2 && 漩涡武器层数 >= 8",
-      "Unit": 0,
-      "Spell": "狂风怒号",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "auras.升腾 == 0 && 漩涡武器层数 >= 8 && AOE开关 == 0 && 敌人人数 >= 2",
-      "Unit": 0,
-      "Spell": "闪电链",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "auras.升腾 == 0 && 漩涡武器层数 >= 8",
-      "Unit": 0,
-      "Spell": "闪电箭",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "",
-      "Spell": "",
-      "Hotkey": "",
-      "Step": ""
-    },
-    {
-      "Enabled": true,
-      "Condition": "战斗时间 == 0 || 目标类型 == 0 || 目标类型 >= 30",
-      "Spell": "暂停",
-      "Hotkey": "",
-      "Step": ""
-    },
+   
     {
       "Enabled": true,
       "Condition": "目标类型 == 12 && spells.净化灵魂 == 0",
@@ -203,15 +167,19 @@
     },
     {
       "Enabled": true,
-      "Condition": "无激流最低 == true",
+      "Condition": "auras.生命释放 == 0 && spells.激流 == 0 && 无激流最低 == true",
       "UnitName": "无激流最低",
       "Spell": "激流",
       "Hotkey": "",
-      "Step": "",
-      "SubConditions": [
-        "spells.激流层数 >= 2",
-        "spells.激流层数 == 1 && 无激流最低值 <= 90"
-      ]
+      "Step": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "auras.生命释放 == 0 && spells.激流 == 0 && 最低单位 == true",
+      "UnitName": "最低单位",
+      "Spell": "激流",
+      "Hotkey": "",
+      "Step": ""
     },
     {
       "Enabled": true,

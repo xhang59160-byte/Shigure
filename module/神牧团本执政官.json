@@ -1,0 +1,307 @@
+{
+  "Id": "神牧团本执政官-20260621000000000",
+  "Name": "神牧团本执政官",
+  "Author": "ported-from-python",
+  "Version": "1.1.0",
+  "Enabled": true,
+  "Match": {
+    "ClassId": 5,
+    "SpecId": 2,
+    "PartyType": "1-40",
+    "HeroTalent": 3
+  },
+  "Units": [
+    {
+      "Name": "魔法单位",
+      "Kind": "UnitWithDispelType",
+      "Reverse": false,
+      "DispelType": 1
+    },
+    {
+      "Name": "疾病单位",
+      "Kind": "UnitWithDispelType",
+      "Reverse": false,
+      "DispelType": 3
+    },
+    {
+      "Name": "最低单位",
+      "HealthName": "最低单位值",
+      "Kind": "LowestHealth",
+      "HealthThreshold": 100,
+      "Reverse": false
+    },
+    {
+      "Name": "无愈合最低",
+      "HealthName": "无愈合最低值",
+      "Kind": "LowestHealthWithoutAura",
+      "HealthThreshold": 101,
+      "Reverse": false,
+      "AuraNames": [
+        "愈合祷言"
+      ]
+    },
+    {
+      "Name": "无愈合坦克",
+      "Kind": "UnitWithRoleWithoutAura",
+      "Role": 1,
+      "Reverse": false,
+      "AuraNames": [
+        "愈合祷言"
+      ]
+    }
+  ],
+  "Counts": [
+    {
+      "Name": "C90",
+      "Kind": "UnitsBelowHealth",
+      "HealthThreshold": 90
+    },
+    {
+      "Name": "群疗限值数量",
+      "Kind": "UnitsBelowHealth",
+      "HealthThresholdField": "治疗限值"
+    },
+    {
+      "Name": "群疗限值2数量",
+      "Kind": "UnitsBelowHealth",
+      "HealthThresholdField": "治疗限值2"
+    }
+  ],
+  "ValueAdjustments": [
+    {
+      "Enabled": true,
+      "Condition": "",
+      "Field": "治疗限值",
+      "Delta": 0,
+      "Formula": "60 + (能量值 * 0.3)"
+    },
+    {
+      "Enabled": true,
+      "Condition": "",
+      "Field": "治疗限值2",
+      "Delta": 0,
+      "Formula": "50 + (能量值 * 0.3)"
+    },
+    {
+      "Enabled": true,
+      "Condition": "",
+      "Field": "治疗限值20",
+      "Delta": 0,
+      "Formula": "40 + (能量值 * 0.3)"
+    },
+    {
+      "Enabled": true,
+      "Condition": "施法技能 == 32 && auras.织光层数 > 0",
+      "Field": "auras.织光层数",
+      "Delta": -1,
+      "Formula": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "施法技能 == 29",
+      "Field": "auras.织光层数",
+      "Delta": 1,
+      "Formula": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "施法技能 == 33",
+      "Field": "auras.织光层数",
+      "Delta": 1,
+      "Formula": ""
+    }
+  ],
+  "Rules": [
+    {
+      "Enabled": true,
+      "Condition": "引导 > 0",
+      "Spell": "暂停",
+      "Hotkey": "",
+      "Step": "神牧-引导: 暂停"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.绝望祷言 == 0 && 生命值 < 50",
+      "Unit": 0,
+      "Spell": "绝望祷言",
+      "Hotkey": "",
+      "Step": "神牧-自保: 绝望祷言"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.奥术洪流 == 0 && 能量值 <= 90",
+      "Unit": 0,
+      "Spell": "奥术洪流",
+      "Hotkey": "",
+      "Step": "神牧-回蓝: 奥术洪流"
+    },
+    {
+      "Enabled": true,
+      "Condition": "一键辅助 == 10",
+      "Unit": 0,
+      "Spell": "真言术：韧",
+      "Hotkey": "",
+      "Step": "神牧-一键: 真言术：韧"
+    },
+    {
+      "Enabled": true,
+      "Condition": "插入法术 != \"\"",
+      "Unit": 0,
+      "Spell": "插入法术",
+      "Hotkey": "",
+      "Step": "神牧-插入法术"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.纯净术 == 0 && 首领战 in (4, 5) && 魔法单位 == true",
+      "UnitName": "魔法单位",
+      "Spell": "纯净术",
+      "Hotkey": "",
+      "Step": "神牧-驱散: 魔法"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.纯净术 == 0 && 疾病单位 == true",
+      "UnitName": "疾病单位",
+      "Spell": "纯净术",
+      "Hotkey": "",
+      "Step": "神牧-驱散: 疾病"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.纯净术 == 0 && 目标类型 == 12",
+      "Unit": 0,
+      "Spell": "纯净术",
+      "Hotkey": "",
+      "Step": "神牧-驱散: 当前目标"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.愈合祷言 == 0 && 无愈合最低 == true && 无愈合最低值 < 95",
+      "UnitName": "无愈合最低",
+      "Spell": "愈合祷言",
+      "Hotkey": "",
+      "Step": "神牧-愈合祷言: 低血无愈合"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.愈合祷言 == 0 && 无愈合坦克 == true",
+      "UnitName": "无愈合坦克",
+      "Spell": "愈合祷言",
+      "Hotkey": "",
+      "Step": "神牧-愈合祷言: 坦克"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.愈合祷言 == 0 && 无愈合最低 == true",
+      "UnitName": "无愈合最低",
+      "Spell": "愈合祷言",
+      "Hotkey": "",
+      "Step": "神牧-愈合祷言: 无愈合最低"
+    },
+    {
+      "Enabled": true,
+      "Condition": "spells.愈合祷言 == 0",
+      "Unit": 1,
+      "Spell": "愈合祷言",
+      "Hotkey": "",
+      "Step": "神牧-愈合祷言: 玩家"
+    },
+    {
+      "Enabled": true,
+      "Condition": "施法技能 != 17 && C90 >= 2 && spells.光晕 == 0",
+      "Unit": 0,
+      "Spell": "光晕",
+      "Hotkey": "",
+      "Step": "神牧-团疗: 光晕"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && spells.静充能 <= 3 && 最低单位值 < 治疗限值2",
+      "UnitName": "最低单位",
+      "Spell": "圣言术：静",
+      "Hotkey": "",
+      "Step": "神牧-低血: 圣言术：静"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && spells.圣言术：静 == 0 && 最低单位值 < 治疗限值20",
+      "UnitName": "最低单位",
+      "Spell": "圣言术：静",
+      "Hotkey": "",
+      "Step": "神牧-危急: 圣言术：静"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && spells.神圣化身 == 0 && 群疗限值数量 >= 3 && spells.圣言术：静 > 5",
+      "Unit": 0,
+      "Spell": "神圣化身",
+      "Hotkey": "",
+      "Step": "神牧-团疗: 神圣化身"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && auras.织光层数 > 0 && auras.圣光涌动 > 0 && 群疗限值数量 >= 3",
+      "Unit": 0,
+      "Spell": "治疗祷言",
+      "Hotkey": "",
+      "Step": "神牧-团疗: 治疗祷言"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && auras.织光层数 > 0 && 移动 == false && 施法技能 != 32 && 群疗限值数量 >= 3",
+      "Unit": 0,
+      "Spell": "治疗祷言",
+      "Hotkey": "",
+      "Step": "神牧-团疗: 治疗祷言"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && auras.织光层数 > 0 && 移动 == false && 施法技能 == 32 && 群疗限值2数量 > 3",
+      "Unit": 0,
+      "Spell": "治疗祷言",
+      "Hotkey": "",
+      "Step": "神牧-团疗: 连续治疗祷言"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && auras.织光层数 > 0 && 移动 == false && 施法技能 == 32 && 群疗限值数量 >= 7",
+      "Unit": 0,
+      "Spell": "治疗祷言",
+      "Hotkey": "",
+      "Step": "神牧-团疗: 连续治疗祷言"
+    },
+    {
+      "Enabled": true,
+      "Condition": "最低单位 == true && 最低单位值 < 治疗限值 && auras.织光层数 < 4",
+      "UnitName": "最低单位",
+      "Spell": "快速治疗",
+      "Hotkey": "",
+      "Step": "神牧-补血: 快速治疗"
+    },
+    {
+      "Enabled": true,
+      "Condition": "战斗时间 > 0 && 目标类型 in (1, 2, 3) && spells.圣言术：罚 == 0",
+      "Unit": 0,
+      "Spell": "圣言术：罚",
+      "Hotkey": "",
+      "Step": "神牧-输出: 圣言术：罚"
+    },
+    {
+      "Enabled": true,
+      "Condition": "战斗时间 > 0 && 目标类型 in (1, 2, 3) && 移动 == false && spells.神圣之火 == 0",
+      "Unit": 0,
+      "Spell": "神圣之火",
+      "Hotkey": "",
+      "Step": "神牧-输出: 神圣之火"
+    },
+    {
+      "Enabled": true,
+      "Condition": "战斗时间 > 0 && 目标类型 in (1, 2, 3) && 移动 == false",
+      "Unit": 0,
+      "Spell": "惩击",
+      "Hotkey": "",
+      "Step": "神牧-输出: 惩击"
+    }
+  ]
+}
