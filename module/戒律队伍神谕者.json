@@ -306,7 +306,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "auras.暗影层数 == 0 && auras.圣光涌动 > 0 && 无救赎最低 == true && 无救赎最低值 <= 90",
+      "Condition": "auras.愈合层数 == 0 && auras.圣光涌动 > 0 && 无救赎最低 == true && 无救赎最低值 <= 90",
       "UnitName": "无救赎最低",
       "Spell": "快速治疗",
       "Hotkey": "",
@@ -314,7 +314,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "auras.暗影层数 == 0 && auras.圣光涌动 > 0 && 最低单位 == true && 最低单位值 <= 80",
+      "Condition": "auras.愈合层数 == 0 && 最低单位 == true && 最低单位值 <= 60 && 移动 == false",
       "UnitName": "最低单位",
       "Spell": "快速治疗",
       "Hotkey": "",
@@ -385,7 +385,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "spells.心灵震爆 == 0 && spells.暗影分流 == 0 && 有救赎数量 == 0 && 移动 == false",
+      "Condition": "spells.心灵震爆 == 0 && spells.暗影分流 == 0 && 有救赎数量 != 0 && 移动 == false",
       "Unit": 0,
       "Spell": "心灵震爆",
       "Hotkey": "",
