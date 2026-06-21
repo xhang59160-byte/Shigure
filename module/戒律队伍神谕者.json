@@ -298,7 +298,7 @@
     },
     {
       "Enabled": true,
-      "Condition": "spells.苦修 == 0 && auras.虚空之盾 == 0 && 最低单位 == true && 最低单位值 <= 70",
+      "Condition": "spells.苦修 == 0 && auras.虚空之盾 == 0 && 最低单位 == true && 最低单位值 <= 75",
       "UnitName": "最低单位",
       "Spell": "苦修",
       "Hotkey": "",
@@ -306,15 +306,15 @@
     },
     {
       "Enabled": true,
-      "Condition": "auras.愈合层数 == 0 && auras.圣光涌动 > 0 && 无救赎最低 == true && 无救赎最低值 <= 90",
-      "UnitName": "无救赎最低",
+      "Condition": "auras.愈合层数 == 0 && auras.圣光涌动 > 0 && 最低单位 == true && 最低单位值 <= 65",
+      "UnitName": "最低单位",
       "Spell": "快速治疗",
       "Hotkey": "",
       "Step": ""
     },
     {
       "Enabled": true,
-      "Condition": "auras.愈合层数 == 0 && 最低单位 == true && 最低单位值 <= 60 && 移动 == false",
+      "Condition": "auras.愈合层数 == 0 && 最低单位 == true && 最低单位值 <= 65 && 移动 == false",
       "UnitName": "最低单位",
       "Spell": "快速治疗",
       "Hotkey": "",
