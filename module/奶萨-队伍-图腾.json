@@ -21,7 +21,7 @@
       "Name": "诅咒单位",
       "Kind": "UnitWithDispelType",
       "Reverse": false,
-      "DispelType": 3
+      "DispelType": 2
     },
     {
       "Name": "最低单位",
@@ -98,7 +98,7 @@
    
     {
       "Enabled": true,
-      "Condition": "目标类型 == 12 && spells.净化灵魂 == 0",
+      "Condition": "目标类型 in (12, 13) && spells.净化灵魂 == 0",
       "Unit": 0,
       "Spell": "净化灵魂",
       "Hotkey": "",
