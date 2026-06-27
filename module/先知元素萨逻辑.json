@@ -84,7 +84,7 @@
       "Step": "先知元素-一键辅助流电炽焰: 流电炽焰"
     },
     {
-      "Enabled": true,
+      "Enabled": false,
       "Condition": "spells.先祖迅捷 == 0",
       "Unit": 0,
       "Spell": "先祖迅捷",
