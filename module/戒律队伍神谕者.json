@@ -2,7 +2,7 @@
   "Id": "新模块1-20260612100954681",
   "Name": "戒律队伍神谕者",
   "Author": "Wayne",
-  "Version": "1.1.0",
+  "Version": "1.2.2.0",
   "Enabled": true,
   "Match": {
     "ClassId": 5,
@@ -165,7 +165,7 @@
       "Step": ""
     },
     {
-      "Enabled": true,
+      "Enabled": false,
       "Condition": "spells.渐隐术 == 0 && 生命值 <= 90",
       "Unit": 0,
       "Spell": "渐隐术",
@@ -173,7 +173,7 @@
       "Step": ""
     },
     {
-      "Enabled": true,
+      "Enabled": false,
       "Condition": "一键辅助 == 10",
       "Unit": 0,
       "Spell": "真言术：韧",
@@ -376,7 +376,7 @@
       "Step": ""
     },
     {
-      "Enabled": true,
+      "Enabled": false,
       "Condition": "spells.暗言术：灭 == 0 && 有救赎数量 > 0",
       "Unit": 0,
       "Spell": "暗言术：灭",

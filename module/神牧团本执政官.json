@@ -2,7 +2,7 @@
   "Id": "神牧团本执政官-20260621000000000",
   "Name": "神牧团本执政官",
   "Author": "ported-from-python",
-  "Version": "1.1.0",
+  "Version": "1.2.2.0",
   "Enabled": true,
   "Match": {
     "ClassId": 5,
@@ -70,27 +70,6 @@
   "ValueAdjustments": [
     {
       "Enabled": true,
-      "Condition": "",
-      "Field": "治疗限值",
-      "Delta": 0,
-      "Formula": "60 + (能量值 * 0.3)"
-    },
-    {
-      "Enabled": true,
-      "Condition": "",
-      "Field": "治疗限值2",
-      "Delta": 0,
-      "Formula": "50 + (能量值 * 0.3)"
-    },
-    {
-      "Enabled": true,
-      "Condition": "",
-      "Field": "治疗限值20",
-      "Delta": 0,
-      "Formula": "40 + (能量值 * 0.3)"
-    },
-    {
-      "Enabled": true,
       "Condition": "施法技能 == 32 && auras.织光层数 > 0",
       "Field": "auras.织光层数",
       "Delta": -1,
@@ -109,6 +88,27 @@
       "Field": "auras.织光层数",
       "Delta": 1,
       "Formula": ""
+    },
+    {
+      "Enabled": true,
+      "Condition": "",
+      "Field": "治疗限值",
+      "Delta": 0,
+      "Formula": "60 + (能量值 * 0.3)"
+    },
+    {
+      "Enabled": true,
+      "Condition": "",
+      "Field": "治疗限值2",
+      "Delta": 0,
+      "Formula": "50 + (能量值 * 0.3)"
+    },
+    {
+      "Enabled": true,
+      "Condition": "",
+      "Field": "治疗限值20",
+      "Delta": 0,
+      "Formula": "40 + (能量值 * 0.3)"
     }
   ],
   "Rules": [
@@ -117,7 +117,7 @@
       "Condition": "引导 > 0",
       "Spell": "暂停",
       "Hotkey": "",
-      "Step": "神牧-引导: 暂停"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -125,7 +125,7 @@
       "Unit": 0,
       "Spell": "绝望祷言",
       "Hotkey": "",
-      "Step": "神牧-自保: 绝望祷言"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -133,7 +133,7 @@
       "Unit": 0,
       "Spell": "奥术洪流",
       "Hotkey": "",
-      "Step": "神牧-回蓝: 奥术洪流"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -141,7 +141,7 @@
       "Unit": 0,
       "Spell": "真言术：韧",
       "Hotkey": "",
-      "Step": "神牧-一键: 真言术：韧"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -149,7 +149,7 @@
       "Unit": 0,
       "Spell": "插入法术",
       "Hotkey": "",
-      "Step": "神牧-插入法术"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -157,7 +157,7 @@
       "UnitName": "魔法单位",
       "Spell": "纯净术",
       "Hotkey": "",
-      "Step": "神牧-驱散: 魔法"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -165,7 +165,7 @@
       "UnitName": "疾病单位",
       "Spell": "纯净术",
       "Hotkey": "",
-      "Step": "神牧-驱散: 疾病"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -173,7 +173,7 @@
       "Unit": 0,
       "Spell": "纯净术",
       "Hotkey": "",
-      "Step": "神牧-驱散: 当前目标"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -181,7 +181,7 @@
       "UnitName": "无愈合最低",
       "Spell": "愈合祷言",
       "Hotkey": "",
-      "Step": "神牧-愈合祷言: 低血无愈合"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -189,7 +189,7 @@
       "UnitName": "无愈合坦克",
       "Spell": "愈合祷言",
       "Hotkey": "",
-      "Step": "神牧-愈合祷言: 坦克"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -197,7 +197,7 @@
       "UnitName": "无愈合最低",
       "Spell": "愈合祷言",
       "Hotkey": "",
-      "Step": "神牧-愈合祷言: 无愈合最低"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -205,7 +205,7 @@
       "Unit": 1,
       "Spell": "愈合祷言",
       "Hotkey": "",
-      "Step": "神牧-愈合祷言: 玩家"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -213,7 +213,7 @@
       "Unit": 0,
       "Spell": "光晕",
       "Hotkey": "",
-      "Step": "神牧-团疗: 光晕"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -221,7 +221,7 @@
       "UnitName": "最低单位",
       "Spell": "圣言术：静",
       "Hotkey": "",
-      "Step": "神牧-低血: 圣言术：静"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -229,7 +229,7 @@
       "UnitName": "最低单位",
       "Spell": "圣言术：静",
       "Hotkey": "",
-      "Step": "神牧-危急: 圣言术：静"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -237,7 +237,7 @@
       "Unit": 0,
       "Spell": "神圣化身",
       "Hotkey": "",
-      "Step": "神牧-团疗: 神圣化身"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -245,7 +245,7 @@
       "Unit": 0,
       "Spell": "治疗祷言",
       "Hotkey": "",
-      "Step": "神牧-团疗: 治疗祷言"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -253,7 +253,7 @@
       "Unit": 0,
       "Spell": "治疗祷言",
       "Hotkey": "",
-      "Step": "神牧-团疗: 治疗祷言"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -261,7 +261,7 @@
       "Unit": 0,
       "Spell": "治疗祷言",
       "Hotkey": "",
-      "Step": "神牧-团疗: 连续治疗祷言"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -269,7 +269,7 @@
       "Unit": 0,
       "Spell": "治疗祷言",
       "Hotkey": "",
-      "Step": "神牧-团疗: 连续治疗祷言"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -277,7 +277,7 @@
       "UnitName": "最低单位",
       "Spell": "快速治疗",
       "Hotkey": "",
-      "Step": "神牧-补血: 快速治疗"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -285,7 +285,7 @@
       "Unit": 0,
       "Spell": "圣言术：罚",
       "Hotkey": "",
-      "Step": "神牧-输出: 圣言术：罚"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -293,7 +293,7 @@
       "Unit": 0,
       "Spell": "神圣之火",
       "Hotkey": "",
-      "Step": "神牧-输出: 神圣之火"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -301,7 +301,7 @@
       "Unit": 0,
       "Spell": "惩击",
       "Hotkey": "",
-      "Step": "神牧-输出: 惩击"
+      "Step": ""
     }
   ]
 }

@@ -2,7 +2,7 @@
   "Id": "奶骑大秘境-20260614103400001",
   "Name": "奶骑大秘境",
   "Author": "Laoer",
-  "Version": "1.1.0",
+  "Version": "1.2.2.0",
   "Enabled": true,
   "Match": {
     "ClassId": 2,

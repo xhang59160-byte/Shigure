@@ -2,7 +2,7 @@
   "Id": "先知元素萨逻辑-20260623000000000",
   "Name": "先知元素萨逻辑",
   "Author": "abcdefg",
-  "Version": "1.0.0",
+  "Version": "1.2.2.0",
   "Enabled": true,
   "Match": {
     "ClassId": 7,
@@ -18,7 +18,7 @@
       "Condition": "引导 > 0",
       "Spell": "暂停",
       "Hotkey": "",
-      "Step": "先知元素-引导: 暂停"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -26,14 +26,14 @@
       "Unit": 0,
       "Spell": "插入法术",
       "Hotkey": "",
-      "Step": "先知元素-插入法术"
+      "Step": ""
     },
     {
       "Enabled": true,
       "Condition": "战斗时间 == 0 || 目标类型 not in (1, 2, 3)",
       "Spell": "暂停",
       "Hotkey": "",
-      "Step": "先知元素-无有效敌方目标"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -41,7 +41,7 @@
       "Unit": 0,
       "Spell": "元素冲击",
       "Hotkey": "",
-      "Step": "先知元素-单体模式90能量: 元素冲击"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -49,7 +49,7 @@
       "Unit": 0,
       "Spell": "大地震击",
       "Hotkey": "",
-      "Step": "先知元素-单体模式60能量: 大地震击"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -57,7 +57,7 @@
       "Unit": 0,
       "Spell": "元素冲击",
       "Hotkey": "",
-      "Step": "先知元素-90能量: 元素冲击"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -65,7 +65,7 @@
       "Unit": 0,
       "Spell": "地震术",
       "Hotkey": "",
-      "Step": "先知元素-60能量3+目标: 地震术"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -73,7 +73,7 @@
       "Unit": 0,
       "Spell": "大地震击",
       "Hotkey": "",
-      "Step": "先知元素-60能量1-2目标: 大地震击"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -81,15 +81,15 @@
       "Unit": 0,
       "Spell": "流电炽焰",
       "Hotkey": "",
-      "Step": "先知元素-一键辅助流电炽焰: 流电炽焰"
+      "Step": ""
     },
     {
-      "Enabled": false,
+      "Enabled": true,
       "Condition": "spells.先祖迅捷 == 0",
       "Unit": 0,
       "Spell": "先祖迅捷",
       "Hotkey": "",
-      "Step": "先知元素-卡CD: 先祖迅捷"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -97,7 +97,7 @@
       "Unit": 0,
       "Spell": "流电炽焰",
       "Hotkey": "",
-      "Step": "先知元素-补火震: 流电炽焰"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -105,7 +105,7 @@
       "Unit": 0,
       "Spell": "熔岩爆裂",
       "Hotkey": "",
-      "Step": "先知元素-单体火球: 熔岩爆裂"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -113,7 +113,7 @@
       "Unit": 0,
       "Spell": "闪电箭",
       "Hotkey": "",
-      "Step": "先知元素-风暴守护者1目标: 闪电箭"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -121,7 +121,7 @@
       "Unit": 0,
       "Spell": "闪电箭",
       "Hotkey": "",
-      "Step": "先知元素-单体填充: 闪电箭"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -129,7 +129,7 @@
       "Unit": 0,
       "Spell": "流电炽焰",
       "Hotkey": "",
-      "Step": "先知元素-双目标卡CD: 流电炽焰"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -137,7 +137,7 @@
       "Unit": 0,
       "Spell": "熔岩爆裂",
       "Hotkey": "",
-      "Step": "先知元素-双目标火球: 熔岩爆裂"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -145,7 +145,7 @@
       "Unit": 0,
       "Spell": "闪电箭",
       "Hotkey": "",
-      "Step": "先知元素-风暴守护者2目标: 闪电箭"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -153,7 +153,7 @@
       "Unit": 0,
       "Spell": "闪电链",
       "Hotkey": "",
-      "Step": "先知元素-双目标填充: 闪电链"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -161,7 +161,7 @@
       "Unit": 0,
       "Spell": "熔岩爆裂",
       "Hotkey": "",
-      "Step": "先知元素-净化烈焰熔岩奔腾: 熔岩爆裂"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -169,7 +169,7 @@
       "Unit": 0,
       "Spell": "流电炽焰",
       "Hotkey": "",
-      "Step": "先知元素-3+目标卡CD: 流电炽焰"
+      "Step": ""
     },
     {
       "Enabled": true,
@@ -177,7 +177,7 @@
       "Unit": 0,
       "Spell": "闪电链",
       "Hotkey": "",
-      "Step": "先知元素-3+目标填充: 闪电链"
+      "Step": ""
     }
   ]
 }

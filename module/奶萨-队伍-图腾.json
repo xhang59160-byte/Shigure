@@ -2,7 +2,7 @@
   "Id": "新模块1-20260618002420140",
   "Name": "奶萨-队伍-图腾",
   "Author": "abcdefg",
-  "Version": "1.1.0",
+  "Version": "1.2.2.0",
   "Enabled": true,
   "Match": {
     "ClassId": 7,
@@ -95,7 +95,6 @@
       "Hotkey": "",
       "Step": ""
     },
-   
     {
       "Enabled": true,
       "Condition": "目标类型 in (12, 13) && spells.净化灵魂 == 0",
